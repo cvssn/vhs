@@ -1,4 +1,10 @@
-# emulador de vídeo vhs
+# ferramenta gui vhs
+
+`este código é *lento*. ele foi projetado para ser o mais preciso possível, não rápido. você pode pegar todos os episódios dos simpsons que irá editar e cortá-los primeiro no adobe premiere (ou no seu editor de vídeo favorito) e depois executar o "clip show" exportado por meio deste programa, em vez de desperdiçar ciclos de cpu em episódios inteiros.`
+
+##### original readme
+
+#### emulador de vídeo vhs
 
 isso é uma reescrita de python 3.6 do repositório https://github.com/joncampbell123/composite-video-simulator
 
