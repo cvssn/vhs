@@ -1,5 +1,7 @@
 import math
+import os
 import random
+import sys
 from enum import Enum
 from typing import List
 
@@ -17,7 +19,7 @@ M_PI = math.pi
 Int_MIN_VALUE = -2147483648
 Int_MAX_VALUE = 2147483647
 
-RingPattern = np.load('ringPattern.npy')
+RingPattern = np.load(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ringPattern.py'))
 
 
 def ringing(img2d, alpha=0.5, noiseSize=0, noiseValue=2, clip=True, seed=None):
@@ -467,7 +469,7 @@ class Ntsc:
         noise = 0.0
         
         if self._vhs_head_switching_phase_noise != 0.0:
-            x = numpy.int32(self.rand() * self.rand() * self.rand() * self.rand())
+            x = numpy.int32(random.randint(sys.maxsize - 2000000000, sys.maxsize))
             x %= 2000000000
             
             noise = x / 1000000000.0 - 1.0
@@ -788,7 +790,9 @@ class Ntsc:
         I[field::2] = self._blur_chroma(I[field::2])
         Q[field::2] = self._blur_chroma(Q[field::2])
 
-        yiq2bgr(yiq, dst, field)
+        yiq2bgr(yiq)
+        
+        return yiq2bgr(yiq)
 
     def _blur_chroma(self, chroma: numpy.ndarray) -> numpy.ndarray:
         h, w = chroma.shape
