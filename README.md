@@ -2,7 +2,11 @@
 
 `este código é *lento*. ele foi projetado para ser o mais preciso possível, não rápido. você pode pegar todos os episódios dos simpsons que irá editar e cortá-los primeiro no adobe premiere (ou no seu editor de vídeo favorito) e depois executar o "clip show" exportado por meio deste programa, em vez de desperdiçar ciclos de cpu em episódios inteiros.`
 
-##### original readme
+## download
+
+#### para windows:
+
+você pode [baixar a última versão aqui](https://github.com/JargeZ/ntsc/releases/latest/download/ntscQT.exe) ou a partir da [página de releases](https://github.com/JargeZ/ntsc/releases)
 
 #### emulador de vídeo vhs
 
