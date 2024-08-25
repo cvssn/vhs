@@ -1,6 +1,6 @@
-import os
 import sys
 
+from pathlib import Path
 import cv2
 import numpy
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -43,6 +43,9 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.add_slider("_video_noise", 0, 4200)
         self.add_slider("_video_scanline_phase_shift", 0, 270)
         self.add_slider("_video_scanline_phase_shift_offset", 0, 3)
+        
+        self.add_slider("_head_switching_speed", 0, 100)
+        
         self.add_checkbox("_vhs_head_switching", (1, 1))
         self.add_checkbox("_color_bleed_before", (1, 2))
         self.add_checkbox("_enable_ringing2", (2, 1))
@@ -290,10 +293,10 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         # abrir a caixa de diálogo de seleção de diretório e defina o valor da variável igual ao caminho para o diretório selecionado
         if file:
-            norm_path = os.path.normpath(file[0])
+            norm_path = Path(file[0])
             print(f"arquivo: {norm_path}")
             
-            cap = cv2.VideoCapture(norm_path)
+            cap = cv2.VideoCapture(str(norm_path))
             print(f"cap: {cap} isopened: {cap.isOpened()}")
             
             self.input_video = {
@@ -319,6 +322,8 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         # file_dialog.setDefaultSuffix('.mp4')
         target_file = QFileDialog.getSaveFileName(self, 'renderizar como', '', "vídeo mp4 (*.mp4);;todos os arquivos (*)")
         
+        print(f"salvamento escolhido como: {target_file}")
+        
         if not target_file[0]:
             return None
         
@@ -327,7 +332,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         else:
             target_file = target_file[0]
 
-        target_file = os.path.normpath(target_file)
+        target_file = Path(target_file)
         
         render_data = {
             "target_file": target_file,
