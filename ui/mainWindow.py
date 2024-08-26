@@ -45,6 +45,19 @@ class Ui_MainWindow(object):
         self.positionControlLayout = QtWidgets.QHBoxLayout()
         self.positionControlLayout.setObjectName("positionControlLayout")
         
+        self.refreshFrameButton = QtWidgets.QPushButton(self.centralwidget)
+        
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.refreshFrameButton.sizePolicy().hasHeightForWidth())
+        
+        self.refreshFrameButton.setSizePolicy(sizePolicy)
+        self.refreshFrameButton.setMinimumSize(QtCore.QSize(0, 0))
+        self.refreshFrameButton.setMaximumSize(QtCore.QSize(27, 28))
+        self.refreshFrameButton.setObjectName("refreshFrameButton")
+        self.positionControlLayout.addWidget(self.refreshFrameButton)
+        
         self.videoTrackSlider = QtWidgets.QScrollBar(self.centralwidget)
         self.videoTrackSlider.setTabletTracking(False)
         self.videoTrackSlider.setAutoFillBackground(False)
@@ -193,7 +206,8 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "vhs"))
         
         self.image_frame.setText(_translate("MainWindow", "ImageFrameTextLabel"))
-        self.livePreviewCheckbox.setText(_translate("MainWindow", "LivePreview"))
+        self.refreshFrameButton.setText(_translate("MainWindow", "🔄"))
+        self.livePreviewCheckbox.setText(_translate("MainWindow", "livepreview"))
         self.label.setText(_translate("MainWindow", "altura de visualização"))
         self.seedLabel.setText(_translate("MainWindow", "seed"))
         self.label_2.setText(_translate("MainWindow", "renderizar altura"))
