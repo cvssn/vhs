@@ -445,6 +445,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     def render_image(self):
         target_file = pick_save_file(self, title='salvar frame como', suffix='.png')
+        
+        if not target_file and not self.current_frame:
+            return None
+        
         render_h = self.renderHeightBox.value()
         crop_wh = resize_to_height(self.orig_wh, render_h)
         image = cv2.resize(self.current_frame, crop_wh)
