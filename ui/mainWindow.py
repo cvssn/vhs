@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# implementação de formulário gerado a partir da leitura do arquivo ui 'mainwindow.ui'
+# implementação de formulário gerado a partir da leitura do arquivo ui 'ui/mainwindow.ui'
 #
 # criado por: gerador de código pyqt5 ui 5.14.1
 #
@@ -35,7 +35,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName("verticalLayout")
         
         self.image_frame = QtWidgets.QLabel(self.centralwidget)
-        self.image_frame.setMinimumSize(QtCore.QSize(640, 480))
+        self.image_frame.setMinimumSize(QtCore.QSize(854, 480))
         self.image_frame.setAlignment(QtCore.Qt.AlignCenter)
         self.image_frame.setObjectName("image_frame")
         
@@ -57,7 +57,7 @@ class Ui_MainWindow(object):
         self.positionControlLayout.addWidget(self.videoTrackSlider)
         
         self.livePreviewCheckbox = QtWidgets.QCheckBox(self.centralwidget)
-        self.livePreviewCheckbox.setMaximumSize(QtCore.QSize(106, 16777215))
+        self.livePreviewCheckbox.setMaximumSize(QtCore.QSize(136, 16777215))
         self.livePreviewCheckbox.setObjectName("livePreviewCheckbox")
         
         self.positionControlLayout.addWidget(self.livePreviewCheckbox)
@@ -138,7 +138,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.pauseRenderButton.sizePolicy().hasHeightForWidth())
         
         self.pauseRenderButton.setSizePolicy(sizePolicy)
-        self.pauseRenderButton.setMaximumSize(QtCore.QSize(120, 16777215))
+        self.pauseRenderButton.setMaximumSize(QtCore.QSize(165, 16777215))
         self.pauseRenderButton.setSizeIncrement(QtCore.QSize(0, 0))
         
         font = QtGui.QFont()
@@ -154,7 +154,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.pauseRenderButton)
         self.stopRenderButton = QtWidgets.QPushButton(self.centralwidget)
         self.stopRenderButton.setEnabled(False)
-        self.stopRenderButton.setMaximumSize(QtCore.QSize(104, 16777215))
+        self.stopRenderButton.setMaximumSize(QtCore.QSize(138, 16777215))
         self.stopRenderButton.setObjectName("stopRenderButton")
         
         self.horizontalLayout.addWidget(self.stopRenderButton)
