@@ -2,9 +2,10 @@
 
 # implementação de formulário gerado a partir da leitura do arquivo ui 'ui/mainwindow.ui'
 #
-# criado por: gerador de código pyqt5 ui 5.14.1
+# criado por: gerador de código pyqt5 ui 5.15.1
 #
-# aviso! todas as mudanças feitas nesse arquivo serão perdidas!
+# aviso! qualquer mudança manual feita nesse arquivo será perdida quando o pyuic5 rodar novamente.
+# não edite esse arquivo a não ser que você saiba o que esteja fazendo.
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -127,9 +128,21 @@ class Ui_MainWindow(object):
         
         self.renderVideoButton = QtWidgets.QPushButton(self.centralwidget)
         self.renderVideoButton.setEnabled(True)
+        
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.renderVideoButton.sizePolicy().hasHeightForWidth())
+        
+        self.renderVideoButton.setSizePolicy(sizePolicy)
+        self.renderVideoButton.setMinimumSize(QtCore.QSize(360, 0))
+        self.renderVideoButton.setBaseSize(QtCore.QSize(0, 0))
         self.renderVideoButton.setObjectName("renderVideoButton")
         
         self.horizontalLayout.addWidget(self.renderVideoButton)
+        self.saveImageButton = QtWidgets.QPushButton(self.centralwidget)
+        self.saveImageButton.setObjectName("saveImageButton")
+        self.horizontalLayout.addWidget(self.saveImageButton)
         self.pauseRenderButton = QtWidgets.QPushButton(self.centralwidget)
         
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
@@ -176,8 +189,8 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "renderizar altura"))
         self.compareModeButton.setText(_translate("MainWindow", "comparar modo"))
         self.toggleMainEffect.setText(_translate("MainWindow", "on/off"))
-        self.openFile.setText(_translate("MainWindow", "abrir vídeo"))
-        
-        self.renderVideoButton.setText(_translate("MainWindow", "renderizar como"))
+        self.openFile.setText(_translate("MainWindow", "abrir arquivo (vídeo ou imagem)"))
+        self.renderVideoButton.setText(_translate("MainWindow", "renderizar vídeo como"))
+        self.saveImageButton.setText(_translate("MainWindow", "salvar imagem"))
         self.pauseRenderButton.setText(_translate("MainWindow", "⏸ pausar renderizador"))
         self.stopRenderButton.setText(_translate("MainWindow", "encerrar renderização"))

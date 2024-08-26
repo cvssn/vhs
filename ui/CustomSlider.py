@@ -10,6 +10,7 @@ class CustomSlider(QtWidgets.QWidget):
         self.slider = DoubleSlider(QtCore.Qt.Horizontal)
         self.numbox = QtWidgets.QDoubleSpinBox()
         self.numbox.setRange(self.slider.minimum(), self.slider.maximum())
+        
         self.slider.valueChanged.connect(self.numbox.setValue)
         self.slider.rangeChanged.connect(self.numbox.setRange)
         self.numbox.valueChanged.connect(self.slider.setValue)
