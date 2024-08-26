@@ -1,4 +1,6 @@
 from pathlib import Path
+
+import numpy
 from PyQt5.QtWidgets import QFileDialog
 
 
@@ -24,3 +26,20 @@ def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = Non
         target_file = target_file[0]
         
     return Path(target_file)
+
+
+def trim_to_4width(img: numpy.ndarray) -> numpy.ndarray:
+    """
+    trabalhar com crash caso a imagem não seja dividida por 4
+    """
+    height, width, channels = img.shape
+    
+    print(f"┃ wh da imagem: {width}x{height} w % 4 = {width % 4}")
+    
+    if width % 4 != 0:
+        img = img[:, :width % 4 * -1]
+        height, width, channels = img.shape
+        
+        print(f"┗ corrigido para o wh: {width}x{height} w % 4 = {width % 4}")
+        
+    return img
