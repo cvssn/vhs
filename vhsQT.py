@@ -413,6 +413,8 @@ def main():
     
     if translator.load(locale + '.qm', 'translate'):
         print(f'localização carregada: {locale}') # nome, dir
+    else:
+        print("utilizando tradução padrão")
     
     app = QtWidgets.QApplication(sys.argv) # nova instância qapplication
     app.installTranslator(translator)
