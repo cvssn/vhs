@@ -411,8 +411,18 @@ def main():
     
     locale = QtCore.QLocale.system()
     
-    if translator.load(locale + '.qm', 'translate'):
-        print(f'localização carregada: {locale}') # nome, dir
+    print(f"tente carregar o locale {locale}")
+    
+    if getattr(sys, 'frozen', False):
+        locale_file = str((Path(sys._MEIPASS) / 'translate' / f'{locale}.qm').resolve())
+    else:
+        locale_file = str((Path(__file__).absolute().parent / 'translate' / f'{locale}.qm').resolve())
+    
+    print(f"arquivo: {locale_file}")
+    
+    # if translator.load(locale + '.qm', directory='translate'):
+    if translator.load(locale_file):
+        print(f'Localization loaded: {locale}') # nome, diretório
     else:
         print("utilizando tradução padrão")
     
