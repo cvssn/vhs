@@ -29,8 +29,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         # necessário para acessar variáveis, métodos, etc. (design.py)
         super().__init__()
         
-        self.supported_video_type = ['.mp4', '.mkv', '.avi', '.webm', '.mpg']
-        self.supported_image_type = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+        self.supported_video_type = ['.mp4', '.mkv', '.avi', '.webm', '.mpg', '.gif']
+        self.supported_image_type = ['.png', '.jpg', '.jpeg', '.webp']
         
         # necessário para inicializar o design
         self.setupUi(self)
