@@ -112,6 +112,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.toggleMainEffect.stateChanged.connect(self.toggle_main_effect)
         self.pauseRenderButton.clicked.connect(self.toggle_pause_render)
         self.livePreviewCheckbox.stateChanged.connect(self.toggle_live_preview)
+        self.refreshFrameButton.clicked.connect(self.nt_update_preview)
+        self.openImageUrlButton.clicked.connect(self.open_image_by_url)
 
         self.seedSpinBox.valueChanged.connect(self.update_seed)
         self.seedSpinBox.setValue(3)
@@ -349,6 +351,23 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.preview = trim_to_4width(self.preview)
         
         self.nt_update_preview()
+        
+    @QtCore.pyqtSlot()
+    def open_image_by_url(self):
+        url, ok = QInputDialog.getText(self, self.tr('abrir imagem por url'), self.tr('url da imagem:'))
+        
+        if ok:
+            cap = cv2.VideoCapture(url)
+            
+            if cap.isOpened():
+                ret, img = cap.read()
+                
+                self.set_image_mode()
+                self.open_image(img)
+            else:
+                self.update_status(self.tr('erro ao abrir o url da imagem :('))
+                
+                return None
 
     def open_file(self):
         file = QtWidgets.QFileDialog.getOpenFileName(self, "selecionar arquivo")
@@ -364,8 +383,9 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.set_video_mode()
             self.open_video(path)
         elif file_suffix in self.supported_image_type:
-            self.set_image_mode()
-            self.open_image(path)
+            img = cv2.imread(str(path.resolve()))
+            
+            self.open_image(img)
         else:
             self.update_status(f"tipo de arquivo não compatível: {file_suffix}")
 
@@ -385,8 +405,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.livePreviewCheckbox.hide()
         self.renderVideoButton.hide()
 
-    def open_image(self, path: Path):
-        img = cv2.imread(str(path.resolve()))
+    def open_image(self, img: numpy.ndarray):
         height, width, channels = img.shape
         self.orig_wh = width, height
         

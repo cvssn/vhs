@@ -119,10 +119,20 @@ class Ui_MainWindow(object):
         
         self.verticalLayout.addWidget(self.statusLabel)
         
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        
+        self.openImageUrlButton = QtWidgets.QToolButton(self.centralwidget)
+        self.openImageUrlButton.setObjectName("openImageUrlButton")
+        
+        self.horizontalLayout_4.addWidget(self.openImageUrlButton)
+        
         self.openFile = QtWidgets.QPushButton(self.centralwidget)
         self.openFile.setObjectName("openFile")
         
-        self.verticalLayout.addWidget(self.openFile)
+        self.horizontalLayout_4.addWidget(self.openFile)
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
+        
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         
@@ -189,6 +199,7 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "renderizar altura"))
         self.compareModeButton.setText(_translate("MainWindow", "comparar modo"))
         self.toggleMainEffect.setText(_translate("MainWindow", "on/off"))
+        self.openImageUrlButton.setText(_translate("MainWindow", "abrir url da imagem"))
         self.openFile.setText(_translate("MainWindow", "abrir arquivo (vídeo ou imagem)"))
         self.renderVideoButton.setText(_translate("MainWindow", "renderizar vídeo como"))
         self.saveImageButton.setText(_translate("MainWindow", "salvar imagem"))
