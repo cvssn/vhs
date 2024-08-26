@@ -1,20 +1,18 @@
-import sys
-
 from pathlib import Path
 import cv2
 import numpy
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import QSlider, QHBoxLayout, QLabel, QCheckBox, QFileDialog
+from PyQt5.QtWidgets import QSlider, QHBoxLayout, QLabel, QCheckBox
 from numpy import ndarray
 
-from Renderer import Renderer
-from funcs import resize_to_height, pick_save_file
-from vhs import random_ntsc
+from app.Renderer import Renderer
+from app.funcs import resize_to_height, pick_save_file
+from app.vhs import random_ntsc
 from ui import mainWindow
 from ui.DoubleSlider import DoubleSlider
 
 
-class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
+class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     def __init__(self):
         self.current_frame = False
         self.input_video = {}
@@ -24,12 +22,14 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.mainEffect = True
         self.nt_controls = {}
         
-        super().__init__() # isso é necessário aqui para acessar variáveis, métodos etc. no arquivo design.py
+        # necessário para acessar variáveis, métodos, etc. (design.py)
+        super().__init__()
         
         self.supported_video_type = ['.mp4', '.mkv', '.avi', '.webm', '.mpg']
-        self.supported_image_type = ['.png', '.jpg', '.jpeg', '.gif']
+        self.supported_image_type = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
         
-        self.setupUi(self) # isso é necessário para inicializar nosso design
+        # necessário para inicializar o design
+        self.setupUi(self)
         
         self.strings = {
             "_composite_preemphasis": self.tr("pré-ênfase composta"),
@@ -37,18 +37,18 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "_vhs_edge_wave": self.tr("onda de borda"),
             "_output_vhs_tape_speed": self.tr("velocidade da fita vhs"),
             "_ringing": self.tr("ringing"),
-            "_ringing_power": self.tr("poder de ringing"),
-            "_ringing_shift": self.tr("mudança de ringing"),
+            "_ringing_power": self.tr("poder de toque"),
+            "_ringing_shift": self.tr("mudança de toque"),
             "_freq_noise_size": self.tr("tamanho do ruído de frequência"),
             "_freq_noise_amplitude": self.tr("amplitude de ruído de frequência"),
             "_color_bleed_horiz": self.tr("sangramento de cor horizontal"),
-            "_color_bleed_vert": self.tr("sangramento de cor vertical"),
-            "_video_chroma_noise": self.tr("ruído cromático de vídeo"),
-            "_video_chroma_phase_noise": self.tr("Video chroma phase noise"),
+            "_color_bleed_vert": self.tr("sangramento de cor verde"),
+            "_video_chroma_noise": self.tr("Video chroma noise"),
+            "_video_chroma_phase_noise": self.tr("ruído de fase croma de vídeo"),
             "_video_chroma_loss": self.tr("perda de croma de vídeo"),
             "_video_noise": self.tr("ruído de vídeo"),
             "_video_scanline_phase_shift": self.tr("mudança de fase da linha de varredura de vídeo"),
-            "_video_scanline_phase_shift_offset": self.tr("mudança de fase da linha de varredura de vídeo"),
+            "_video_scanline_phase_shift_offset": self.tr("deslocamento de mudança de fase da linha de varredura de vídeo"),
             "_head_switching_speed": self.tr("velocidade de movimento do interruptor principal"),
             "_vhs_head_switching": self.tr("troca de cabeça"),
             "_color_bleed_before": self.tr("sangramento de cor antes"),
@@ -60,41 +60,49 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "_nocolor_subcarrier": self.tr("subportadora nocolor"),
             "_vhs_chroma_vert_blend": self.tr("mistura vhs chroma vert"),
             "_vhs_svideo_out": self.tr("saída de vídeo vhs"),
-            "_output_ntsc": self.tr("output do ntsc")
+            "_output_ntsc": self.tr("output do ntsc"),
         }
-
+        
         self.add_slider("_composite_preemphasis", 0, 10, float)
+        
         self.add_slider("_vhs_out_sharpen", 1, 5)
         self.add_slider("_vhs_edge_wave", 0, 10)
+        
         # self.add_slider("_output_vhs_tape_speed", 0, 10)
+        
         self.add_slider("_ringing", 0, 1, float)
         self.add_slider("_ringing_power", 0, 10)
         self.add_slider("_ringing_shift", 0, 3, float)
+        
         self.add_slider("_freq_noise_size", 0, 2, float)
         self.add_slider("_freq_noise_amplitude", 0, 5)
+        
         self.add_slider("_color_bleed_horiz", 0, 10)
         self.add_slider("_color_bleed_vert", 0, 10)
+        
         self.add_slider("_video_chroma_noise", 0, 16384)
         self.add_slider("_video_chroma_phase_noise", 0, 50)
         self.add_slider("_video_chroma_loss", 0, 100_000)
         self.add_slider("_video_noise", 0, 4200)
         self.add_slider("_video_scanline_phase_shift", 0, 270)
         self.add_slider("_video_scanline_phase_shift_offset", 0, 3)
-        
+
         self.add_slider("_head_switching_speed", 0, 100)
-        
+
         self.add_checkbox("_vhs_head_switching", (1, 1))
         self.add_checkbox("_color_bleed_before", (1, 2))
         self.add_checkbox("_enable_ringing2", (2, 1))
+        
         self.add_checkbox("_composite_in_chroma_lowpass", (2, 2))
         self.add_checkbox("_composite_out_chroma_lowpass", (3, 1))
         self.add_checkbox("_composite_out_chroma_lowpass_lite", (3, 2))
+        
         self.add_checkbox("_emulating_vhs", (4, 1))
         self.add_checkbox("_nocolor_subcarrier", (4, 2))
         self.add_checkbox("_vhs_chroma_vert_blend", (5, 1))
         self.add_checkbox("_vhs_svideo_out", (5, 2))
         self.add_checkbox("_output_ntsc", (6, 1))
-        
+
         self.previewHeightBox.valueChanged.connect(lambda: self.set_current_frame(self.current_frame))
         self.openFile.clicked.connect(self.open_file)
         self.renderVideoButton.clicked.connect(self.render_video)
@@ -117,15 +125,15 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             print("aguardando renderização anterior")
             self.thread.wait()
         except AttributeError:
-            print("configurando o primeiro renderizador")
+            print("configure o primeiro renderizador")
             
         # criação de um tópico
         self.thread = QtCore.QThread()
         
-        # criação de um objeto para executar código em outra thread
+        # criação de um objeto para executar código em outro thread
         self.videoRenderer = Renderer()
         
-        # transferência do objeto para outra thread
+        # transferência de um objeto para outro thread
         self.videoRenderer.moveToThread(self.thread)
         
         # conectar todos os sinais e slots
@@ -134,13 +142,13 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.videoRenderer.renderStateChanged.connect(self.set_render_state)
         self.videoRenderer.sendStatus.connect(self.update_status)
         
-        # conecta o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
+        # conectar o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
         self.thread.started.connect(self.videoRenderer.run)
-        
+
     @QtCore.pyqtSlot()
     def stop_render(self):
         self.videoRenderer.stop()
-        
+
     @QtCore.pyqtSlot()
     def toggle_compare_mode(self):
         state = self.sender().isChecked()
@@ -193,7 +201,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     @QtCore.pyqtSlot(str)
     def update_status(self, string):
         self.statusLabel.setText(string)
-        
+
     @QtCore.pyqtSlot(bool)
     def set_render_state(self, is_render_active):
         self.isRenderActive = is_render_active
@@ -206,7 +214,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
         # todo: reatribuir parâmetros durante a renderização
         self.seedSpinBox.setEnabled(not is_render_active)
-        
+
     def sync_nt_to_sliders(self):
         for parameter_name, element in self.nt_controls.items():
             value = getattr(self.nt, parameter_name)
@@ -225,8 +233,8 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             if related_label:
                 related_label.setText(str(value)[:7])
 
-            print(f"configurar o slider {type(value)} {parameter_name} para {value}")
-        
+            print(f"configurar slider {type(value)} {parameter_name} para {value}")
+            
         self.nt_update_preview()
 
     def value_changed_slot(self):
@@ -243,10 +251,8 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             value = element.isChecked()
 
         self.update_status(f"configurar {parameter_name} para {value}")
-        
         print(f"configurar {parameter_name} para {value}")
         setattr(self.nt, parameter_name, value)
-        
         self.nt_update_preview()
 
     def add_checkbox(self, param_name, pos):
@@ -258,7 +264,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         self.nt_controls[param_name] = checkbox
         self.checkboxesLayout.addWidget(checkbox, pos[0], pos[1])
-        
+
     def add_slider(self, param_name, min_val, max_val, slider_value_type=int):
         slider_layout = QHBoxLayout()
         
@@ -271,7 +277,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             # box.setSingleStep(0.1)
             slider = DoubleSlider()
             slider.mouseRelease.connect(self.value_changed_slot)
-            
+
         slider.blockSignals(True)
         slider.setEnabled(True)
         slider.setMaximum(max_val)
@@ -288,7 +294,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         label = QLabel()
         # label.setText(descrição ou nome)
         label.setText(self.strings[param_name])
-        
+
         # todo: fazer um randomizador em vez de uma caixa
         # box.setMinimum(min_val)
         # box.setMaximum(max_val)
@@ -299,15 +305,15 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         value_label.setObjectName(param_name)
         
         # slider.valueChanged.connect(lambda intval: value_label.setText(str(intval)))
-        
+
         slider_layout.addWidget(label)
         slider_layout.addWidget(slider)
         # slider_layout.addWidget(box)
         slider_layout.addWidget(value_label)
-        
+
         self.nt_controls[param_name] = slider
         self.controlLayout.addLayout(slider_layout)
-        
+
     def get_current_video_frame(self):
         preview_h = self.previewHeightBox.value()
         
@@ -319,7 +325,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         ret, frame = self.input_video["cap"].read()
         
         return frame
-    
+
     def set_current_frame(self, frame):
         current_frame_valid = isinstance(frame, ndarray)
         preview_h = self.previewHeightBox.value()
@@ -330,9 +336,9 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             return None
 
         self.current_frame = frame
-
+        
         try:
-            crop_wh = resize_to_height(self, preview_h)
+            crop_wh = resize_to_height(self.orig_wh, preview_h)
             self.preview = cv2.resize(frame, crop_wh)
         except ZeroDivisionError:
             self.update_status("ZeroDivisionError :DDDDDD")
@@ -340,9 +346,9 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             pass
         
         self.nt_update_preview()
-        
+
     def open_file(self):
-        file = QtWidgets.QFileDialog.getOpenFileName(self, "selecione o arquivo")
+        file = QtWidgets.QFileDialog.getOpenFileName(self, "selecionar arquivo")
         
         if file:
             path = Path(file[0])
@@ -358,8 +364,8 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.set_image_mode()
             self.open_image(path)
         else:
-            self.update_status(f"tipo de arquivo não compatível {file_suffix}")
-            
+            self.update_status(f"tipo de arquivo não compatível: {file_suffix}")
+
     def set_video_mode(self):
         self.videoTrackSlider.blockSignals(False)
         self.videoTrackSlider.show()
@@ -404,7 +410,6 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         }
         
         print(f"selfinput: {self.input_video}")
-        
         self.orig_wh = (int(self.input_video["width"]), int(self.input_video["height"]))
         self.set_current_frame(self.get_current_video_frame())
         self.renderHeightBox.setValue(self.input_video["height"])
@@ -423,7 +428,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     def render_video(self):
         target_file = pick_save_file(self, title='renderizar vídeo como', suffix='.mp4')
-        
+
         render_data = {
             "target_file": target_file,
             "nt": self.nt,
@@ -435,7 +440,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.toggle_main_effect()
         self.videoRenderer.render_data = render_data
         self.thread.start()
-        
+
     def nt_process(self, frame) -> ndarray:
         _ = self.nt.composite_layer(frame, frame, field=2, fieldno=2)
         
@@ -457,7 +462,7 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             return None
 
         ntsc_out_image = self.nt_process(self.preview)
-        
+
         if self.compareMode:
             ntsc_out_image = numpy.concatenate((self.preview[:self.preview.shape[0] // 2], ntsc_out_image[ntsc_out_image.shape[0] // 2:]))
 
@@ -468,35 +473,3 @@ class ExampleApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         image = QtGui.QImage(img.data, img.shape[1], img.shape[0], QtGui.QImage.Format_RGB888).rgbSwapped()
         
         self.image_frame.setPixmap(QtGui.QPixmap.fromImage(image))
-
-
-def main():
-    translator = QtCore.QTranslator()
-    
-    locale = QtCore.QLocale.system()
-    
-    print(f"tente carregar o locale {locale}")
-    
-    if getattr(sys, 'frozen', False):
-        locale_file = str((Path(sys._MEIPASS) / 'translate' / f'{locale}.qm').resolve())
-    else:
-        locale_file = str((Path(__file__).absolute().parent / 'translate' / f'{locale}.qm').resolve())
-    
-    print(f"arquivo: {locale_file}")
-    
-    # if translator.load(locale + '.qm', directory='translate'):
-    if translator.load(locale_file):
-        print(f'Localization loaded: {locale}') # nome, diretório
-    else:
-        print("utilizando tradução padrão")
-    
-    app = QtWidgets.QApplication(sys.argv) # nova instância qapplication
-    app.installTranslator(translator)
-    
-    window = ExampleApp() # criação de um objeto da classe exampleapp
-    window.show() # mostrando a janela
-    app.exec_() # inicialização do aplicativo
-
-
-if __name__ == '__main__': # se executarmos o arquivo diretamente em vez de importar
-    main() # executar a função main()
