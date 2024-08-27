@@ -20,12 +20,17 @@ def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = Non
     if not target_file[0]:
         return None
     
-    if target_file[1] == f'arquivo {suffix} (*{suffix})' and target_file[0][-4:] != suffix:
-        target_file = target_file[0] + suffix
-    else:
-        target_file = target_file[0]
+    path = Path(target_file[0])
+    
+    if path.suffix != suffix:
+        path = path.parent / (path.name + suffix)
         
-    return Path(target_file)
+    # if target_file[1] == f'File {suffix} (*{suffix})' and target_file[0][-4:] != suffix:
+    #     target_file = target_file[0] + suffix
+    # else:
+    #     target_file = target_file[0]
+    
+    return path
 
 
 def trim_to_4width(img: numpy.ndarray) -> numpy.ndarray:
