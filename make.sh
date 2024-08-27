@@ -7,7 +7,7 @@ case $1 in
     ;;
 "translate")
     echo atualizando o arquivo de tradução para linguista
-    pylupdate5 ui/mainWindow.py app/vhsQT.py -ts translate/pt_BR.ts
+    pylupdate5 ui/mainWindow.py app/VhsApp.py -ts translate/pt_BR.ts
     ;;
 "build")
     if [ ! -f 'ffmpeg.exe' ]; then
