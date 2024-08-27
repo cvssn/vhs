@@ -24,11 +24,6 @@ def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = Non
     
     if path.suffix != suffix:
         path = path.parent / (path.name + suffix)
-        
-    # if target_file[1] == f'File {suffix} (*{suffix})' and target_file[0][-4:] != suffix:
-    #     target_file = target_file[0] + suffix
-    # else:
-    #     target_file = target_file[0]
     
     return path
 
