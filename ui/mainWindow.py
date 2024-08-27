@@ -36,7 +36,9 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName("verticalLayout")
         
         self.image_frame = QtWidgets.QLabel(self.centralwidget)
-        self.image_frame.setMinimumSize(QtCore.QSize(854, 480))
+        self.image_frame.setMinimumSize(QtCore.QSize(854, 500))
+        self.image_frame.setMaximumSize(QtCore.QSize(1000, 500))
+        self.image_frame.setScaledContents(False)
         self.image_frame.setAlignment(QtCore.Qt.AlignCenter)
         self.image_frame.setObjectName("image_frame")
         
@@ -72,6 +74,7 @@ class Ui_MainWindow(object):
         
         self.livePreviewCheckbox = QtWidgets.QCheckBox(self.centralwidget)
         self.livePreviewCheckbox.setMaximumSize(QtCore.QSize(136, 16777215))
+        self.livePreviewCheckbox.setToolTip("")
         self.livePreviewCheckbox.setObjectName("livePreviewCheckbox")
         
         self.positionControlLayout.addWidget(self.livePreviewCheckbox)
