@@ -504,6 +504,6 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     @QtCore.pyqtSlot(object)
     def render_preview(self, img):
-        image = QtGui.QImage(img.data, img.shape[1], img.shape[0], QtGui.QImage.Format_RGB888).rgbSwapped()
+        image = QtGui.QImage(img.data.tobytes(), img.shape[1], img.shape[0], QtGui.QImage.Format_RGB888).rgbSwapped()
         
         self.image_frame.setPixmap(QtGui.QPixmap.fromImage(image))
