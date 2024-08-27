@@ -36,6 +36,10 @@ class Renderer(QtCore.QObject):
             # criar um contêiner conforme alterado com correção de falha quando o quadro não for dividido por 4
             (render_wh[0] - render_wh[0] % 4, render_wh[1])
         )
+        
+        print(f'vídeo de input: {str(self.render_data["input_video"]["path"].resolve())}')
+        print(f'output temporário: {str(tmp_output.resolve())}')
+        print(f'vídeo de output: {str(self.render_data["target_file"].resolve())}')
 
         frame_index = 0
         
