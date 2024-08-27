@@ -7,6 +7,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QSlider, QHBoxLayout, QLabel, QCheckBox, QInputDialog
 from numpy import ndarray
 
+from app.logs import logger
 from app.Renderer import Renderer
 from app.funcs import resize_to_height, pick_save_file, trim_to_4width
 from app.vhs import random_ntsc, Ntsc
@@ -126,13 +127,13 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     def setup_renderer(self):
         try:
             self.update_status("encerrando o renderizador anterior")
-            print("encerrando o renderizador anterior")
+            logger.debug("encerrando o renderizador anterior")
             self.thread.quit()
             self.update_status("aguardando renderização anterior")
-            print("aguardando renderização anterior")
+            logger.debug("aguardando renderização anterior")
             self.thread.wait()
         except AttributeError:
-            print("configure o primeiro renderizador")
+            logger.debug("configure o primeiro renderizador")
             
         # criação de um tópico
         self.thread = QtCore.QThread()
@@ -207,6 +208,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     @QtCore.pyqtSlot(str)
     def update_status(self, string):
+        logger.info('[status de gui] ' + string)
+        
         self.statusLabel.setText(string)
 
     @QtCore.pyqtSlot(bool)
@@ -240,7 +243,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             if related_label:
                 related_label.setText(str(value)[:7])
 
-            print(f"configurar slider {type(value)} {parameter_name} para {value}")
+            logger.debug(f"configurar slider {type(value)} {parameter_name} para {value}")
             
         self.nt_update_preview()
 
@@ -257,8 +260,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         elif isinstance(element, QCheckBox):
             value = element.isChecked()
 
-        self.update_status(f"configurar {parameter_name} para {value}")
-        print(f"configurar {parameter_name} para {value}")
+        logger.debug(f"configurar {parameter_name} para {value}")
+        
         setattr(self.nt, parameter_name, value)
         self.nt_update_preview()
 
@@ -424,9 +427,9 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.set_current_frame(img)
 
     def open_video(self, path: Path):
-        print(f"arquivo: {path}")
+        logger.debug(f"arquivo: {path}")
         cap = cv2.VideoCapture(str(path))
-        print(f"cap: {cap} isOpened: {cap.isOpened()}")
+        logger.debug(f"cap: {cap} isOpened: {cap.isOpened()}")
         
         self.input_video = {
             "cap": cap,
@@ -437,7 +440,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "path": path
         }
         
-        print(f"selfinput: {self.input_video}")
+        logger.debug(f"selfinput: {self.input_video}")
+        
         self.orig_wh = (int(self.input_video["width"]), int(self.input_video["height"]))
         self.set_current_frame(self.get_current_video_frame())
         self.renderHeightBox.setValue(self.input_video["height"])

@@ -5,6 +5,7 @@ from PyQt5 import QtCore
 import ffmpeg
 from imutils.video import FileVideoStream
 
+from app.logs import logger
 from app.funcs import resize_to_height, trim_to_4width
 
 
@@ -38,9 +39,9 @@ class Renderer(QtCore.QObject):
             (render_wh[0] - render_wh[0] % 4, render_wh[1])
         )
         
-        print(f'vídeo de input: {str(self.render_data["input_video"]["path"].resolve())}')
-        print(f'output temporário: {str(tmp_output.resolve())}')
-        print(f'vídeo de output: {str(self.render_data["target_file"].resolve())}')
+        logger.debug(f'vídeo de input: {str(self.render_data["input_video"]["path"].resolve())}')
+        logger.debug(f'output temporário: {str(tmp_output.resolve())}')
+        logger.debug(f'vídeo de output: {str(self.render_data["target_file"].resolve())}')
 
         frame_index = 0
         

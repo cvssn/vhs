@@ -3,6 +3,8 @@ from pathlib import Path
 import numpy
 from PyQt5.QtWidgets import QFileDialog
 
+from app.logs import logger
+
 
 def resize_to_height(wh, target_h):
     w, h = wh
@@ -15,7 +17,7 @@ def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = Non
     pick_filter = f"arquivo {suffix} (*{suffix});;todos os arquivos (*)"
     target_file = QFileDialog.getSaveFileName(self, title, '', pick_filter)
     
-    print(f"salvamento escolhido como: {target_file}")
+    logger.debug(f"salvamento escolhido como: {target_file}")
     
     if not target_file[0]:
         return None
@@ -34,12 +36,12 @@ def trim_to_4width(img: numpy.ndarray) -> numpy.ndarray:
     """
     height, width, channels = img.shape
     
-    print(f"┃ wh da imagem: {width}x{height} w % 4 = {width % 4}")
+    logger.debug(f"┃ wh da imagem: {width}x{height} w % 4 = {width % 4}")
     
     if width % 4 != 0:
         img = img[:, :width % 4 * -1]
         height, width, channels = img.shape
         
-        print(f"┗ corrigido para o wh: {width}x{height} w % 4 = {width % 4}")
+        logger.debug(f"┗ corrigido para o wh: {width}x{height} w % 4 = {width % 4}")
         
     return img
