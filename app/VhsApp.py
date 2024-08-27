@@ -432,7 +432,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "cap": cap,
             "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
             "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            "frames_count": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            "frames_count": cap.get(cv2.CAP_PROP_FRAME_COUNT),
             "orig_fps": int(cap.get(cv2.CAP_PROP_FPS)),
             "path": path
         }
