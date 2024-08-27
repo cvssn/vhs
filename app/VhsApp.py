@@ -124,6 +124,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.seedSpinBox.valueChanged.connect(self.update_seed)
         self.seedSpinBox.setValue(3)
         
+        self.progressBar.setValue(0)
+        self.progressBar.setMinimum(1)
+        self.progressBar.hide()
+        
     def setup_renderer(self):
         try:
             self.update_status("encerrando o renderizador anterior")
@@ -149,6 +153,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.videoRenderer.frameMoved.connect(self.videoTrackSlider.setValue)
         self.videoRenderer.renderStateChanged.connect(self.set_render_state)
         self.videoRenderer.sendStatus.connect(self.update_status)
+        self.videoRenderer.increment_progress.connect(self.increment_progress)
         
         # conectar o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
         self.thread.started.connect(self.videoRenderer.run)
@@ -156,6 +161,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     @QtCore.pyqtSlot()
     def stop_render(self):
         self.videoRenderer.stop()
+        
+    @QtCore.pyqtSlot()
+    def increment_progress(self):
+        self.progressBar.setValue(self.progressBar.value() + 1)
 
     @QtCore.pyqtSlot()
     def toggle_compare_mode(self):
@@ -224,6 +233,11 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
         # todo: reatribuir parâmetros durante a renderização
         self.seedSpinBox.setEnabled(not is_render_active)
+        
+        if is_render_active:
+            self.progressBar.show()
+        else:
+            self.progressBar.hide()
 
     def sync_nt_to_sliders(self):
         for parameter_name, element in self.nt_controls.items():
@@ -448,6 +462,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.videoTrackSlider.setMinimum(1)
         self.videoTrackSlider.setMaximum(self.input_video["frames_count"])
         self.videoTrackSlider.valueChanged.connect(lambda: self.set_current_frame(self.get_current_video_frame()))
+        self.progressBar.setMaximum(self.input_video["frames_count"])
 
     def render_image(self):
         target_file = pick_save_file(self, title='salvar frame como', suffix='.png')
