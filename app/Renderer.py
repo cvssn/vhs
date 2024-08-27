@@ -11,24 +11,34 @@ class Renderer(QtCore.QObject):
     running = False
     mainEffect = True
     pause = False
-    lineView = False
+    liveView = False
     newFrame = QtCore.pyqtSignal(object)
     frameMoved = QtCore.pyqtSignal(int)
     renderStateChanged = QtCore.pyqtSignal(bool)
     sendStatus = QtCore.pyqtSignal(str)
     render_data = {}
-    
+
     def run(self):
         self.running = True
-        
-        ttmp_output = self.render_data['target_file'].parent / f'tmp_{self.render_data["target_file"].name}'
-        
+
+        tmp_output = self.render_data['target_file'].parent / f'tmp_{self.render_data["target_file"].name}'
+
         orig_wh = (self.render_data["input_video"]["width"], self.render_data["input_video"]["height"])
         render_wh = resize_to_height(orig_wh, self.render_data["input_heigth"])
+
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        video = cv2.VideoWriter(str(tmp_output.resolve()), fourcc, self.render_data["input_video"]["orig_fps"], render_wh)
         
+        video = cv2.VideoWriter(
+            str(tmp_output.resolve()),
+            fourcc,
+            self.render_data["input_video"]["orig_fps"],
+            
+            # criar um contêiner conforme alterado com correção de falha quando o quadro não for dividido por 4
+            (render_wh[0] - render_wh[0] % 4, render_wh[1])
+        )
+
         frame_index = 0
+        
         self.renderStateChanged.emit(True)
         
         while self.render_data["input_video"]["cap"].isOpened():
@@ -40,6 +50,7 @@ class Renderer(QtCore.QObject):
 
             frame_index += 1
             self.render_data["input_video"]["cap"].set(1, frame_index)
+            
             ret, frame = self.render_data["input_video"]["cap"].read()
             
             if not ret or not self.running:
@@ -48,6 +59,7 @@ class Renderer(QtCore.QObject):
             if orig_wh != render_wh:
                 frame = cv2.resize(frame, render_wh)
 
+            # crash workaround
             if render_wh[0] % 4 != 0:
                 frame = trim_to_4width(frame)
 
@@ -60,21 +72,34 @@ class Renderer(QtCore.QObject):
                 self.frameMoved.emit(frame_index)
                 self.newFrame.emit(frame)
 
-            status_string = f'Progress: {frame_index}/{self.render_data["input_video"]["frames_count"]}'
+            status_string = f'progresso: {frame_index}/{self.render_data["input_video"]["frames_count"]}'
+            
             self.sendStatus.emit(status_string)
             
             video.write(frame)
 
         video.release()
-
-        audio_orig = (ffmpeg.input(str(self.render_data["input_video"]["path"].resolve())))
+        
+        audio_orig = (
+            ffmpeg
+                .input(str(self.render_data["input_video"]["path"].resolve()))
+        )
+        
         self.sendStatus.emit('áudio original extraído')
+        
         video = ffmpeg.input(str(tmp_output.resolve()))
-        (ffmpeg.output(video.video, audio_orig.audio, str(self.render_data["target_file"].resolve()), shortest=None, vcodec='copy').overwrite_output().run())
+        (
+            ffmpeg
+                .output(video.video, audio_orig.audio, str(self.render_data["target_file"].resolve()), shortest=None, vcodec='copy')
+                .overwrite_output()
+                .run()
+        )
+        
         self.sendStatus.emit('cópia de áudio feita')
         tmp_output.unlink()
+        
         self.renderStateChanged.emit(False)
-        self.sendStatus.emit('renderiação feita')
+        self.sendStatus.emit('renderização feita')
 
     def stop(self):
         self.running = False
