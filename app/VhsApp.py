@@ -447,7 +447,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     def render_image(self):
         target_file = pick_save_file(self, title='salvar frame como', suffix='.png')
         
-        if not target_file and not self.current_frame:
+        if target_file is None or not isinstance(self.current_frame, ndarray):
             return None
         
         render_h = self.renderHeightBox.value()
@@ -463,6 +463,9 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     def render_video(self):
         target_file = pick_save_file(self, title='renderizar vídeo como', suffix='.mp4')
+
+        if not target_file:
+            return None
 
         render_data = {
             "target_file": target_file,
