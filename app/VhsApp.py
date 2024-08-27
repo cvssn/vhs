@@ -388,8 +388,9 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.set_video_mode()
             self.open_video(path)
         elif file_suffix in self.supported_image_type:
-            img = cv2.imread(str(path.resolve()))
+            img = cv2.imdecode(numpy.fromfile(path, dtype=numpy.uint8), cv2.IMREAD_COLOR)
             
+            self.set_image_mode()            
             self.open_image(img)
         else:
             self.update_status(f"tipo de arquivo não compatível: {file_suffix}")
@@ -459,7 +460,14 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         image = self.nt_process(image)
         
-        cv2.imwrite(str(target_file.resolve()), image)
+        is_success, im_buf_arr = cv2.imencode(".png", image)
+        
+        if not is_success:
+            self.update_status("erro ao tentar salvar (!is_success)")
+            
+            return None
+        
+        im_buf_arr.tofile(target_file)
 
     def render_video(self):
         target_file = pick_save_file(self, title='renderizar vídeo como', suffix='.mp4')
