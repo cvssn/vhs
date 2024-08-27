@@ -417,7 +417,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.renderHeightBox.setValue(600)
             self.update_status(self.tr('a resolução da imagem é grande. para obter o melhor efeito, a altura de saída é definida como 600'))
         else:
-            self.renderHeightBox.setValue(height)
+            self.renderHeightBox.setValue(height // 120 * 120)
             
         self.set_current_frame(img)
 
