@@ -242,6 +242,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.progressBar.show()
         else:
             self.progressBar.hide()
+            
+        self.NearestUpScale.setEnabled(not is_render_active)
 
     def sync_nt_to_sliders(self):
         for parameter_name, element in self.nt_controls.items():
@@ -527,7 +529,8 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "target_file": target_file,
             "nt": self.nt,
             "input_video": self.input_video,
-            "input_heigth": self.renderHeightBox.value()
+            "input_heigth": self.renderHeightBox.value(),
+            "upscale_2x": self.NearestUpScale.isChecked()
         }
         
         self.setup_renderer()
