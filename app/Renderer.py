@@ -53,9 +53,6 @@ class Renderer(QtCore.QObject):
             queue_size=322
         ).start()
         
-        # cap = self.render_data[]
-        # ret = True
-        
         while cap.more():
             if self.pause:
                 self.sendStatus.emit(f"{status_string} [P]")
@@ -109,12 +106,13 @@ class Renderer(QtCore.QObject):
         video = ffmpeg.input(str(tmp_output.resolve()))
         (
             ffmpeg
-                .output(video.video, audio_orig.audio, str(self.render_data["target_file"].resolve()), shortest=None, vcodec='copy')
+                .output(video.video, audio_orig.audio, str(self.render_data["target_file"].resolve()), shortest=None, vcodec='copy', acodec='copy')
                 .overwrite_output()
                 .run()
         )
         
         self.sendStatus.emit('cópia de áudio feita')
+        
         tmp_output.unlink()
         
         self.renderStateChanged.emit(False)
