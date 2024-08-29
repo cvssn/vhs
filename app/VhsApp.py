@@ -634,7 +634,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         image = QtGui.QImage(img.data.tobytes(), img.shape[1], img.shape[0], QtGui.QImage.Format_RGB888) \
             .rgbSwapped()
             
-        if self.scale_pixmap:
-            self.image_frame.setPixmap(QtGui.QPixmap.fromImage(image).scaledToHeight(480))
+        max_h = self.image_frame.height()
+        h, w, _ = img.shape
+        
+        if h > max_h:
+            self.image_frame.setPixmap(QtGui.QPixmap.fromImage(image).scaledToHeight(max_h))
         else:
             self.image_frame.setPixmap(QtGui.QPixmap.fromImage(image))
