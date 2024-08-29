@@ -30,6 +30,12 @@ class Ui_MainWindow(object):
         self.checkboxesLayout.setObjectName("checkboxesLayout")
         
         self.controlLayout.addLayout(self.checkboxesLayout)
+        self.templatesLayout = QtWidgets.QHBoxLayout()
+        self.templatesLayout.setObjectName("templatesLayout")
+        self.exportImportConfigButton = QtWidgets.QPushButton(self.centralwidget)
+        self.exportImportConfigButton.setObjectName("exportImportConfigButton")
+        self.templatesLayout.addWidget(self.exportImportConfigButton)
+        self.controlLayout.addLayout(self.templatesLayout)
         self.horizontalLayout_3.addLayout(self.controlLayout)
         
         self.verticalLayout = QtWidgets.QVBoxLayout()
@@ -226,6 +232,7 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "vhs"))
         
+        self.exportImportConfigButton.setText(_translate("MainWindow", "importar / exportar preset"))
         self.image_frame.setText(_translate("MainWindow", "ImageFrameTextLabel"))
         self.refreshFrameButton.setText(_translate("MainWindow", "🔄"))
         self.livePreviewCheckbox.setText(_translate("MainWindow", "livepreview"))
