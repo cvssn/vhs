@@ -131,12 +131,10 @@ class Ui_MainWindow(object):
         self.label_2.setObjectName("label_2")
         
         self.gridLayout_2.addWidget(self.label_2, 1, 1, 1, 1)
-        self.label = QtWidgets.QLabel(self.centralwidget)
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.label.setWordWrap(True)
-        self.label.setObjectName("label")
+        self.NearestUpScale = QtWidgets.QCheckBox(self.centralwidget)
+        self.NearestUpScale.setObjectName("NearestUpScale")
         
-        self.gridLayout_2.addWidget(self.label, 3, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.NearestUpScale, 2, 1, 1, 1)
         self.verticalLayout.addLayout(self.gridLayout_2)
         
         self.statusLabel = QtWidgets.QLabel(self.centralwidget)
@@ -236,7 +234,7 @@ class Ui_MainWindow(object):
         self.ProMode.setText(_translate("MainWindow", "modo pro"))
         self.compareModeButton.setText(_translate("MainWindow", "comparar modo"))
         self.label_2.setText(_translate("MainWindow", "renderizar altura"))
-        self.label.setText(_translate("MainWindow", "readme para uso"))
+        self.NearestUpScale.setText(_translate("MainWindow", "output x2 pelo nearest-neighbor"))
         self.openFile.setText(_translate("MainWindow", "abrir arquivo (vídeo ou imagem)"))
         self.openImageUrlButton.setText(_translate("MainWindow", "abrir url da imagem"))
         self.renderVideoButton.setText(_translate("MainWindow", "renderizar vídeo como"))
