@@ -834,7 +834,7 @@ def random_ntsc(seed=None) -> Ntsc:
     
     ntsc._video_chroma_noise = int(rnd.triangular(0, 16384, 2))
     ntsc._video_chroma_phase_noise = int(rnd.triangular(0, 50, 2))
-    ntsc._video_chroma_loss = int(rnd.triangular(0, 50000, 10))
+    ntsc._video_chroma_loss = int(rnd.triangular(0, 800, 10))
     ntsc._video_noise = int(rnd.triangular(0, 4200, 2))
     
     ntsc._emulating_vhs = rnd.random() < 0.2 # se inclina para o valor padrão

@@ -93,7 +93,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         self.add_slider("_video_chroma_noise", 0, 16384)
         self.add_slider("_video_chroma_phase_noise", 0, 50)
-        self.add_slider("_video_chroma_loss", 0, 30_000)
+        self.add_slider("_video_chroma_loss", 0, 800)
         self.add_slider("_video_noise", 0, 4200)
         self.add_slider("_video_scanline_phase_shift", 0, 270, pro=True)
         self.add_slider("_video_scanline_phase_shift_offset", 0, 3, pro=True)
@@ -147,7 +147,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             
             self.templates = json.loads(res.content)
         except Exception as e:
-            logger.exception('json não carregado')
+            logger.exception(f'json não carregado: {e}')
             
         for name, values in self.templates.items():
             button = QPushButton()
@@ -229,7 +229,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     @QtCore.pyqtSlot()
     def toggle_main_effect(self):
+        raise Exception('asd')
+    
         state = self.toggleMainEffect.isChecked()
+        
         self.mainEffect = state
         
         try:
@@ -520,7 +523,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     def open_video(self, path: Path):
         logger.debug(f"arquivo: {path}")
-        cap = cv2.VideoCapture(str(path))
+        cap = cv2.VideoCapture(str(path.resolve()))
         logger.debug(f"cap: {cap} isOpened: {cap.isOpened()}")
         
         self.input_video = {
@@ -532,7 +535,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "path": path
         }
         
-        logger.debug(f"selfinput: {self.input_video}")
+        logger.debug(f"{self.input_video=}")
         
         self.orig_wh = (int(self.input_video["width"]), int(self.input_video["height"]))
         self.set_render_heigth(self.input_video["height"])
