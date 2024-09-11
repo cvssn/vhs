@@ -8,6 +8,28 @@
 
 você pode [baixar a última versão aqui](https://github.com/JargeZ/ntsc/releases/latest/download/ntscQT.exe) ou a partir da [página de releases](https://github.com/JargeZ/ntsc/releases)
 
+#### para mac os x:
+
+1. abra o terminal
+2. caso ainda não esteja instalado, instale o homebrew pelas instruções aqui: [brew.sh](https://brew.sh/)
+3. instale o ffmpeg
+   ```bash
+   brew install ffmpeg
+   ```
+4. instale o vhsqt:
+   ```bash
+   git clone https://github.com/cvssn/vhs -C ~/vhsqt
+   cd ~/vhsqt
+   python3 -m venv ./venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+5. você pode testar o run pelo comando `python vhsQT.py`
+6. depois de deixar você deve rodar o app rodando o seguinte comando:
+   ```bash
+   cd ~/vhsqt && venv/bin/python vhsQT.py
+   ```
+
 #### emulador de vídeo vhs
 
 isso é uma reescrita de python 3.6 do repositório https://github.com/joncampbell123/composite-video-simulator

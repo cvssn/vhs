@@ -38,16 +38,24 @@ class Renderer(QtCore.QObject):
                 render_wh[1] * 2
             )
 
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourccs = [
+            cv2.VideoWriter_fourcc(*'mp4v'), # não funciona em mac os
+            cv2.VideoWriter_fourcc(*'H264')
+        ]
         
-        video = cv2.VideoWriter(
-            str(tmp_output.resolve()),
-            fourcc,
-            self.render_data["input_video"]["orig_fps"],
+        video = cv2.VideoWriter()
+        
+        open_result = False
+        
+        while not open_result:
+            open_result = video.open(
+                filename=str(tmp_output.resolve()),
+                fourcc=fourccs.pop(0),
+                fps=self.render_data["input_video"]["orig_fps"],
+                frameSize=container_wh
+            )
             
-            # criar um contêiner conforme alterado com correção de falha quando o quadro não for dividido por 4
-            container_wh
-        )
+            logger.debug(f'resultado do vídeo output: {open_result}')
         
         logger.debug(f'vídeo de input: {str(self.render_data["input_video"]["path"].resolve())}')
         logger.debug(f'output temporário: {str(tmp_output.resolve())}')
