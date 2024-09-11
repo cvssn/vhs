@@ -187,7 +187,6 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         # conectar o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
         self.thread.started.connect(self.videoRenderer.run)
-        self.progressBar.setValue(0)
 
     @QtCore.pyqtSlot()
     def stop_render(self):
@@ -583,6 +582,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         self.setup_renderer()
         self.toggle_main_effect()
+        self.progressBar.setValue(1)
         self.videoRenderer.render_data = render_data
         self.thread.start()
 
