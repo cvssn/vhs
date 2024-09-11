@@ -6,7 +6,7 @@ import ffmpeg
 from imutils.video import FileVideoStream
 
 from app.logs import logger
-from app.funcs import resize_to_height, trim_to_4width
+from app.funcs import resize_to_height, trim_to_4width, expand_to_4width
 
 
 class Renderer(QtCore.QObject):
@@ -86,12 +86,14 @@ class Renderer(QtCore.QObject):
 
             # crash workaround
             if render_wh[0] % 4 != 0:
-                frame = trim_to_4width(frame)
+                frame = expand_to_4width(frame)
 
             if self.mainEffect:
                 frame = self.render_data["nt"].composite_layer(frame, frame, field=2, fieldno=2)
                 frame = cv2.convertScaleAbs(frame)
                 frame[1:-1:2] = frame[0:-2:2] / 2 + frame[2::2] / 2
+                
+            frame = frame[:, 0:render_wh[0]]
 
             if frame_index % 10 == 0 or self.liveView:
                 self.frameMoved.emit(frame_index)
