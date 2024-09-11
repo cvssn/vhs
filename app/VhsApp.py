@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from random import randint
-from typing import Tuple, Union
+from typing import Tuple, Union, List, Dict
 import requests
 import cv2
 import numpy
@@ -187,6 +187,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         # conectar o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
         self.thread.started.connect(self.videoRenderer.run)
+        self.progressBar.setValue(0)
 
     @QtCore.pyqtSlot()
     def stop_render(self):
@@ -512,7 +513,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             
         return values
     
-    def nt_set_config(self, values: list[set[str, Union[int, float]]]):
+    def nt_set_config(self, values: List[Dict[str, Union[int, float]]]):
         for parameter_name, value in values.items():
             setattr(self.nt, parameter_name, value)
             
