@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from random import randint
 from typing import Tuple, Union
-
 import requests
 import cv2
 import numpy
@@ -391,7 +390,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         ly.addWidget(value_label)
 
         self.nt_controls[param_name] = slider
-        self.controlLayout.addWidget(slider_frame)
+        self.slidersLayout.addWidget(slider_frame)
 
     def get_current_video_frame(self):
         preview_h = self.renderHeightBox.value()
