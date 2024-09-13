@@ -11,19 +11,19 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>diálogo</string>
+   <string>Dialog</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>30</x>
+     <x>252</x>
      <y>240</y>
-     <width>341</width>
-     <height>32</height>
+     <width>140</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="orientation">
-    <enum>Qt::Horizontal</enum>
+    <enum>Qt::Vertical</enum>
    </property>
    <property name="standardButtons">
     <set>QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
@@ -44,12 +44,12 @@
     <rect>
      <x>10</x>
      <y>240</y>
-     <width>95</width>
-     <height>34</height>
+     <width>228</width>
+     <height>51</height>
     </rect>
    </property>
    <property name="text">
-    <string>copiar</string>
+    <string>Copy</string>
    </property>
   </widget>
  </widget>

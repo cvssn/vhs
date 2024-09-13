@@ -9,19 +9,21 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QSlider, QHBoxLayout, QLabel, QCheckBox, QInputDialog, QPushButton
 from numpy import ndarray
 
+from app.InterlacedRenderer import InterlacedRenderer
 from app.config_dialog import ConfigDialog
 from app.logs import logger
-from app.Renderer import Renderer
-from app.funcs import resize_to_height, pick_save_file, trim_to_4width
-from app.vhs import random_ntsc, Ntsc
+from app.Renderer import DefaultRenderer
+from app.funcs import resize_to_height, pick_save_file, trim_to_4width, set_ui_element
+from app.vhs import random_vhs, Vhs
 from ui import mainWindow
 from ui.DoubleSlider import DoubleSlider
 
 
 class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     def __init__(self):
+        self.videoRenderer: DefaultRenderer = None
         self.current_frame: numpy.ndarray = False
-        self.preview: numpy.ndarray = False
+        self.next_frame: numpy.ndarray = False
         self.scale_pixmap = False
         self.input_video = {}
         self.templates = {}
@@ -29,18 +31,20 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.compareMode: bool = False
         self.isRenderActive: bool = False
         self.mainEffect: bool = True
-        self.nt_controls = {}
-        self.nt: Ntsc = None
+        self.loss_less_mode: bool = False
+        self.__video_output_suffix = ".mp4" # ou .mkv para ffv1
+        self.ProcessAudio: bool = False
+        self.vhs_controls = {}
+        self.vhs: Vhs = None
         self.pro_mode_elements = []
         
-        # necessário para acessar variáveis, métodos, etc. (design.py)
+        # necessário para acessar variáveis, métodos, etc. no arquivo design.py
         super().__init__()
         
         self.supported_video_type = ['.mp4', '.mkv', '.avi', '.webm', '.mpg', '.gif']
         self.supported_image_type = ['.png', '.jpg', '.jpeg', '.webp']
         
-        # necessário para inicializar o design
-        self.setupUi(self)
+        self.setupUi(self) # necessário para inicializar nosso design
         
         self.strings = {
             "_composite_preemphasis": self.tr("pré-ênfase composta"),
@@ -48,49 +52,44 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             "_vhs_edge_wave": self.tr("onda de borda"),
             "_output_vhs_tape_speed": self.tr("velocidade da fita vhs"),
             "_ringing": self.tr("ringing"),
-            "_ringing_power": self.tr("poder de toque"),
-            "_ringing_shift": self.tr("mudança de toque"),
+            "_ringing_power": self.tr("poder de ringing"),
+            "_ringing_shift": self.tr("mudança de ringing"),
             "_freq_noise_size": self.tr("tamanho do ruído de frequência"),
             "_freq_noise_amplitude": self.tr("amplitude de ruído de frequência"),
-            "_color_bleed_horiz": self.tr("sangramento de cor horizontal"),
-            "_color_bleed_vert": self.tr("sangramento de cor verde"),
-            "_video_chroma_noise": self.tr("Video chroma noise"),
+            "_color_bleed_horiz": self.tr("bleed de cor horizontal"),
+            "_color_bleed_vert": self.tr("bleed de cor vertical"),
+            "_video_chroma_noise": self.tr("ruído de croma de vídeo"),
             "_video_chroma_phase_noise": self.tr("ruído de fase croma de vídeo"),
             "_video_chroma_loss": self.tr("perda de croma de vídeo"),
             "_video_noise": self.tr("ruído de vídeo"),
             "_video_scanline_phase_shift": self.tr("mudança de fase da linha de varredura de vídeo"),
-            "_video_scanline_phase_shift_offset": self.tr("deslocamento de mudança de fase da linha de varredura de vídeo"),
+            "_video_scanline_phase_shift_offset": self.tr("mudança de fase da linha de varredura de vídeo"),
             "_head_switching_speed": self.tr("velocidade de movimento do interruptor principal"),
             "_vhs_head_switching": self.tr("troca de cabeça"),
-            "_color_bleed_before": self.tr("sangramento de cor antes"),
+            "_color_bleed_before": self.tr("sangramento de cor anterior"),
             "_enable_ringing2": self.tr("habilitar ringing2"),
             "_composite_in_chroma_lowpass": self.tr("composto em chroma lowpass"),
             "_composite_out_chroma_lowpass": self.tr("passagem baixa de croma composto"),
             "_composite_out_chroma_lowpass_lite": self.tr("composição chroma lowpass lite"),
             "_emulating_vhs": self.tr("emulação vhs"),
             "_nocolor_subcarrier": self.tr("subportadora nocolor"),
-            "_vhs_chroma_vert_blend": self.tr("mistura vhs chroma vert"),
+            "_vhs_chroma_vert_blend": self.tr("misturar vhs chroma vert"),
             "_vhs_svideo_out": self.tr("saída de vídeo vhs"),
-            "_output_ntsc": self.tr("output do ntsc"),
+            "_output_vhs": self.tr("output de vhs"),
+            "_black_line_cut": self.tr("cortar 2% da linha preta")
         }
         
         self.add_slider("_composite_preemphasis", 0, 10, float)
-        
         self.add_slider("_vhs_out_sharpen", 1, 5)
         self.add_slider("_vhs_edge_wave", 0, 10)
-        
         # self.add_slider("_output_vhs_tape_speed", 0, 10)
-        
         self.add_slider("_ringing", 0, 1, float, pro=True)
         self.add_slider("_ringing_power", 0, 10)
         self.add_slider("_ringing_shift", 0, 3, float, pro=True)
-        
         self.add_slider("_freq_noise_size", 0, 2, float, pro=True)
         self.add_slider("_freq_noise_amplitude", 0, 5, pro=True)
-        
         self.add_slider("_color_bleed_horiz", 0, 10)
         self.add_slider("_color_bleed_vert", 0, 10)
-        
         self.add_slider("_video_chroma_noise", 0, 16384)
         self.add_slider("_video_chroma_phase_noise", 0, 50)
         self.add_slider("_video_chroma_loss", 0, 800)
@@ -103,91 +102,115 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.add_checkbox("_vhs_head_switching", (1, 1))
         self.add_checkbox("_color_bleed_before", (1, 2), pro=True)
         self.add_checkbox("_enable_ringing2", (2, 1), pro=True)
-        
         self.add_checkbox("_composite_in_chroma_lowpass", (2, 2), pro=True)
         self.add_checkbox("_composite_out_chroma_lowpass", (3, 1), pro=True)
         self.add_checkbox("_composite_out_chroma_lowpass_lite", (3, 2), pro=True)
-        
         self.add_checkbox("_emulating_vhs", (4, 1))
         self.add_checkbox("_nocolor_subcarrier", (4, 2), pro=True)
         self.add_checkbox("_vhs_chroma_vert_blend", (5, 1), pro=True)
         self.add_checkbox("_vhs_svideo_out", (5, 2), pro=True)
-        self.add_checkbox("_output_ntsc", (6, 1), pro=True)
-
-        self.renderHeightBox.valueChanged.connect(lambda: self.set_current_frame(self.current_frame))
+        self.add_checkbox("_output_vhs", (6, 1), pro=True)
+        self.add_checkbox("_black_line_cut", (1, 2), pro=False)
+        
+        self.renderHeightBox.valueChanged.connect(lambda: self.set_current_frames(*self.get_current_video_frames()))
         self.openFile.clicked.connect(self.open_file)
         self.renderVideoButton.clicked.connect(self.render_video)
         self.saveImageButton.clicked.connect(self.render_image)
         self.stopRenderButton.clicked.connect(self.stop_render)
         self.compareModeButton.stateChanged.connect(self.toggle_compare_mode)
         self.toggleMainEffect.stateChanged.connect(self.toggle_main_effect)
+        self.LossLessCheckBox.stateChanged.connect(self.lossless_exporting)
+        # self.ProcessAudioCheckBox.stateChanged.connect(self.audio_filtering)
         self.pauseRenderButton.clicked.connect(self.toggle_pause_render)
         self.livePreviewCheckbox.stateChanged.connect(self.toggle_live_preview)
         self.refreshFrameButton.clicked.connect(self.nt_update_preview)
         self.openImageUrlButton.clicked.connect(self.open_image_by_url)
         self.exportImportConfigButton.clicked.connect(self.export_import_config)
-        self.ProMode.clicked.connect(lambda: self.set_pro_mode(self.ProMode.isChecked()))
-
+        
+        # self.ProcessAudioCheckBox.hide()
+        
+        # aguardando por outra branch
+        
+        self.ProMode.clicked.connect(
+            lambda: self.set_pro_mode(self.ProMode.isChecked())
+        )
+        
         self.seedSpinBox.valueChanged.connect(self.update_seed)
         presets = [18, 31, 38, 44]
         self.seedSpinBox.setValue(presets[randint(0, len(presets) - 1)])
-        
+
         self.progressBar.setValue(0)
         self.progressBar.setMinimum(1)
         self.progressBar.hide()
-        
+
         self.add_builtin_templates()
         
     def add_builtin_templates(self):
         try:
-            res = requests.get('https://raw.githubusercontent.com/JargeZ/vhs/master/builtin_templates.json')
+            # todo: se online não estiver disponível, carregue a partir do arquivo (é necessário que o arquivo seja incluído nas especificações de construção)
+            res = requests.get('https://raw.githubusercontent.com/cvssn/vhs/master/builtin_templates.json')
             
             if not res.ok:
                 return
             
             self.templates = json.loads(res.content)
         except Exception as e:
-            logger.exception(f'json não carregado: {e}')
+            logger.exception(f'json não foi carregado: {e}')
             
         for name, values in self.templates.items():
             button = QPushButton()
             button.setText(name)
             
-            set_values = (lambda v: lambda: self.nt_set_config(v))(values)
+            set_values = (
+                lambda v: lambda: self.vhs_set_config(v)
+            )(values)
+            
             button.clicked.connect(set_values)
             
             self.templatesLayout.addWidget(button)
+            
+    def get_render_class(self):
+        is_interlaced = False # obter estado da escolha ui
+        
+        if is_interlaced:
+            return InterlacedRenderer
+        else:
+            return DefaultRenderer
         
     def setup_renderer(self):
         try:
             self.update_status("encerrando o renderizador anterior")
             logger.debug("encerrando o renderizador anterior")
+            
             self.thread.quit()
+            
             self.update_status("aguardando renderização anterior")
             logger.debug("aguardando renderização anterior")
+            
             self.thread.wait()
         except AttributeError:
-            logger.debug("configure o primeiro renderizador")
+            logger.debug("configurar primeira renderização")
             
         # criação de um tópico
         self.thread = QtCore.QThread()
         
         # criação de um objeto para executar código em outro thread
-        self.videoRenderer = Renderer()
+        RendererClass = self.get_render_class()
+        self.videoRenderer = RendererClass()
         
-        # transferência de um objeto para outro thread
+        # transferência de objeto para outra thread
         self.videoRenderer.moveToThread(self.thread)
         
-        # conectar todos os sinais e slots
+        # após o qual conectaremos todos os sinais e slots
         self.videoRenderer.newFrame.connect(self.render_preview)
         self.videoRenderer.frameMoved.connect(self.videoTrackSlider.setValue)
         self.videoRenderer.renderStateChanged.connect(self.set_render_state)
         self.videoRenderer.sendStatus.connect(self.update_status)
         self.videoRenderer.increment_progress.connect(self.increment_progress)
         
-        # conectar o sinal de início do thread ao método run do objeto que deve executar o código em outro thread
+        # conectar o sinal de início da thread ao método run do objeto que deve executar o código em outra thread
         self.thread.started.connect(self.videoRenderer.run)
-
+        
     @QtCore.pyqtSlot()
     def stop_render(self):
         self.videoRenderer.stop()
@@ -195,20 +218,20 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     @QtCore.pyqtSlot()
     def increment_progress(self):
         self.progressBar.setValue(self.progressBar.value() + 1)
-
+        
     @QtCore.pyqtSlot()
     def toggle_compare_mode(self):
         state = self.sender().isChecked()
         
         self.compareMode = state
-        self.nt_update_preview()
+        self.vhs_update_preview()
 
     @QtCore.pyqtSlot()
     def toggle_pause_render(self):
         button = self.sender()
         
         if not self.isRenderActive:
-            self.update_status("renderização não está em execução")
+            self.update_status("a renderização não está em execução")
             
             button.setChecked(False)
             
@@ -220,6 +243,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     def toggle_live_preview(self):
         button = self.sender()
+        
         state = button.isChecked()
         
         try:
@@ -229,8 +253,6 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
     @QtCore.pyqtSlot()
     def toggle_main_effect(self):
-        raise Exception('asd')
-    
         state = self.toggleMainEffect.isChecked()
         
         self.mainEffect = state
@@ -240,17 +262,46 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         except AttributeError:
             pass
         
-        self.nt_update_preview()
+        self.vhs_update_preview()
+
+    @QtCore.pyqtSlot()
+    def lossless_exporting(self):
+        lossless_state = self.LossLessCheckBox.isChecked()
+
+        self.loss_less_mode = lossless_state
+        self.__video_output_suffix = '.mkv' if lossless_state else '.mp4'
+        
+        try:
+            self.videoRenderer.lossless = lossless_state
+            
+            logger.debug(f"lossless: {str(lossless_state)}")
+        except AttributeError:
+            pass
+
+    def audio_filtering(self):
+        # state = self.ProcessAudioCheckBox.isChecked()
+        
+        state = False # solução alternativa
+        
+        self.ProcessAudio = state
+        
+        try:
+            self.videoRenderer.audio_process = state
+            
+            logger.debug(f"processar áudio: {str(state)}")
+        except AttributeError:
+            pass
 
     @QtCore.pyqtSlot(int)
     def update_seed(self, seed):
-        self.nt = random_ntsc(seed)
-        self.nt._enable_ringing2 = True
-        self.sync_nt_to_sliders()
+        self.vhs = random_vhs(seed)
+        self.vhs._enable_ringing2 = True
+        
+        self.sync_vhs_to_sliders()
 
     @QtCore.pyqtSlot(str)
     def update_status(self, string):
-        logger.info('[status de gui] ' + string)
+        logger.info('[STATUS DE GUI] ' + string)
         
         self.statusLabel.setText(string)
 
@@ -266,35 +317,34 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
         # todo: reatribuir parâmetros durante a renderização
         self.seedSpinBox.setEnabled(not is_render_active)
-        
+
         if is_render_active:
             self.progressBar.show()
         else:
             self.progressBar.hide()
-            
+
         self.NearestUpScale.setEnabled(not is_render_active)
 
     def sync_nt_to_sliders(self):
         for parameter_name, element in self.nt_controls.items():
             value = getattr(self.nt, parameter_name)
 
-            element.blockSignals(True)
-            
-            if isinstance(value, bool):
-                element.setChecked(value)
-            elif isinstance(value, (int, float)):
-                element.setValue(value)
-                
-            element.blockSignals(False)
+            # necessário porque alguns parâmetros que possuem um tipo float real, mas na interface,
+            # o slide é simplificado para int. No entanto, ao definir os parâmetros iniciais que
+            # ocorrem aqui, você precisa definir a partir dos parâmetros iniciais que flutuam
+            if isinstance(element, QSlider) and isinstance(value, float):
+                value = int(value)
+
+            set_ui_element(element, value)
 
             related_label = element.parent().findChild(QLabel, parameter_name)
             
             if related_label:
                 related_label.setText(str(value)[:7])
 
-            logger.debug(f"configurar slider {type(value)} {parameter_name} para {value}")
+            logger.debug(f"configurar o slider {type(value)} {parameter_name} para {value}")
             
-        self.nt_update_preview()
+        self.vhs_update_preview()
 
     def value_changed_slot(self):
         element = self.sender()
@@ -302,6 +352,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         if isinstance(element, (QSlider, DoubleSlider)):
             value = element.value()
+            
             related_label = element.parent().findChild(QLabel, parameter_name)
             
             if related_label:
@@ -311,17 +362,18 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
 
         logger.debug(f"configurar {parameter_name} para {value}")
         
-        setattr(self.nt, parameter_name, value)
-        self.nt_update_preview()
+        setattr(self.vhs, parameter_name, value)
+        
+        self.vhs_update_preview()
 
-    def add_checkbox(self, param_name, pos, pro=True):
+    def add_checkbox(self, param_name, pos, pro=False):
         checkbox = QCheckBox()
         checkbox.setText(self.strings[param_name])
         checkbox.setObjectName(param_name)
         checkbox.stateChanged.connect(self.value_changed_slot)
         # checkbox.mouseReleaseEvent(lambda: self.controls_set())
         
-        self.nt_controls[param_name] = checkbox
+        self.vhs_controls[param_name] = checkbox
         self.checkboxesLayout.addWidget(checkbox, pos[0], pos[1])
 
         if pro:
@@ -337,7 +389,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             else:
                 frame.hide()
 
-    def add_slider(self, param_name, min_val, max_val, slider_value_type=int, pro=False):
+    def add_slider(self, param_name, min_val, max_val, slider_value_type: Union[int, float] = int, pro=False):
         ly = QHBoxLayout()
         
         slider_frame = QtWidgets.QFrame()
@@ -347,7 +399,7 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             self.pro_mode_elements.append(slider_frame)
             
             slider_frame.hide()
-        
+
         if slider_value_type is int:
             slider = QSlider()
             # box = QSpinBox()
@@ -373,13 +425,14 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         slider.blockSignals(False)
 
         label = QLabel()
-        # label.setText(descrição ou nome)
+        # label.setText(description or name)
         label.setText(self.strings[param_name])
 
-        # todo: fazer um randomizador em vez de uma caixa
+        # todo: faça um randomizador em vez de boxe
         # box.setMinimum(min_val)
         # box.setMaximum(max_val)
         # box.valueChanged.connect(slider.setValue)
+        
         # slider.valueChanged.connect(box.setValue)
         
         value_label = QLabel()
@@ -395,20 +448,42 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         self.nt_controls[param_name] = slider
         self.slidersLayout.addWidget(slider_frame)
 
-    def get_current_video_frame(self):
+    def get_current_video_frames(self):
         preview_h = self.renderHeightBox.value()
         
         if not self.input_video or preview_h < 10:
-            return None
+            return None, None
         
         frame_no = self.videoTrackSlider.value()
         self.input_video["cap"].set(1, frame_no)
-        ret, frame = self.input_video["cap"].read()
+        ret, frame1 = self.input_video["cap"].read()
+
+        # ler o próximo quadro
+        ret, frame2 = self.input_video["cap"].read()
         
+        if not ret:
+            frame2 = frame1
+
+        return frame1, frame2
+
+    def resize_to_preview_frame(self, frame):
+        preview_h = self.renderHeightBox.value()
+        
+        try:
+            crop_wh = resize_to_height(self.orig_wh, preview_h)
+            
+            frame = cv2.resize(frame, crop_wh)
+        except ZeroDivisionError:
+            self.update_status("zerodivisionerror :)")
+
+        if frame.shape[1] % 4 != 0:
+            frame = trim_to_4width(frame)
+
         return frame
 
-    def set_current_frame(self, frame):
-        current_frame_valid = isinstance(frame, ndarray)
+    def set_current_frames(self, frame1: ndarray, frame2=None):
+        current_frame_valid = isinstance(frame1, ndarray)
+        
         preview_h = self.renderHeightBox.value()
         
         if not current_frame_valid or preview_h < 10:
@@ -416,21 +491,14 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
             
             return None
 
-        self.current_frame = frame
-        
-        try:
-            crop_wh = resize_to_height(self.orig_wh, preview_h)
-            self.preview = cv2.resize(frame, crop_wh)
-        except ZeroDivisionError:
-            self.update_status("ZeroDivisionError :DDDDDD")
-            
-            pass
-        
-        if self.preview.shape[1] % 4 != 0:
-            self.preview = trim_to_4width(self.preview)
-        
-        self.nt_update_preview()
-        
+        if frame2 is None:
+            frame2 = frame1.copy()
+
+        self.current_frame = self.resize_to_preview_frame(frame1)
+        self.next_frame = self.resize_to_preview_frame(frame2)
+
+        self.vhs_update_preview()
+
     @QtCore.pyqtSlot()
     def open_image_by_url(self):
         url, ok = QInputDialog.getText(self, self.tr('abrir imagem por url'), self.tr('url da imagem:'))
@@ -464,10 +532,10 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         elif file_suffix in self.supported_image_type:
             img = cv2.imdecode(numpy.fromfile(path, dtype=numpy.uint8), cv2.IMREAD_COLOR)
             
-            self.set_image_mode()            
+            self.set_image_mode()
             self.open_image(img)
         else:
-            self.update_status(f"tipo de arquivo não compatível: {file_suffix}")
+            self.update_status(f"tipo de arquivo não suportado: {file_suffix}")
 
     def set_video_mode(self):
         self.videoTrackSlider.blockSignals(False)
@@ -488,19 +556,24 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     def set_render_heigth(self, height):
         if height > 600:
             self.renderHeightBox.setValue(600)
-            self.update_status(self.tr('a resolução da imagem é grande. para obter o melhor efeito, a altura de saída é definida como 600'))
+            
+            self.update_status(
+                self.tr('a resolução da imagem é grande. para obter o melhor efeito, a altura de saída é definida como 600'))
         else:
             self.renderHeightBox.setValue(height // 120 * 120)
-    
+
     def open_image(self, img: numpy.ndarray):
+        self.setup_renderer()
+        
         height, width, channels = img.shape
         
         self.orig_wh = width, height
+
         self.set_render_heigth(height)
-        
-        self.set_current_frame(img)
-        
-    def nt_get_config(self):
+
+        self.set_current_frames(img)
+
+    def vhs_get_config(self):
         values = {}
         
         element: Union[QCheckBox, QSlider, DoubleSlider]
@@ -510,39 +583,46 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
                 value = element.isChecked()
             elif isinstance(element, (QSlider, DoubleSlider)):
                 value = element.value()
-                
+
             values[parameter_name] = value
-            
+
         return values
-    
-    def nt_set_config(self, values: List[Dict[str, Union[int, float]]]):
+
+    def vhs_set_config(self, values: List[Dict[str, Union[int, float]]]):
         for parameter_name, value in values.items():
-            setattr(self.nt, parameter_name, value)
-            
-        self.sync_nt_to_sliders()
+            setattr(self.vhs, parameter_name, value)
+
+        self.sync_vhs_to_sliders()
 
     def open_video(self, path: Path):
+        self.setup_renderer()
         logger.debug(f"arquivo: {path}")
+        
         cap = cv2.VideoCapture(str(path.resolve()))
-        logger.debug(f"cap: {cap} isOpened: {cap.isOpened()}")
+        logger.debug(f"cap: {cap} isopened: {cap.isOpened()}")
         
         self.input_video = {
             "cap": cap,
             "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
             "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            "frames_count": cap.get(cv2.CAP_PROP_FRAME_COUNT),
-            "orig_fps": int(cap.get(cv2.CAP_PROP_FPS)),
-            "path": path
+            "frames_count": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            "orig_fps": cap.get(cv2.CAP_PROP_FPS),
+            "path": path,
+            "suffix": path.suffix.lower()
         }
         
-        logger.debug(f"{self.input_video=}")
+        logger.debug(f"selfinput: {self.input_video}")
         
         self.orig_wh = (int(self.input_video["width"]), int(self.input_video["height"]))
         self.set_render_heigth(self.input_video["height"])
-        self.set_current_frame(self.get_current_video_frame())
+        self.set_current_frames(*self.get_current_video_frames())
         self.videoTrackSlider.setMinimum(1)
         self.videoTrackSlider.setMaximum(self.input_video["frames_count"])
-        self.videoTrackSlider.valueChanged.connect(lambda: self.set_current_frame(self.get_current_video_frame()))
+        
+        self.videoTrackSlider.valueChanged.connect(
+            lambda: self.set_current_frames(*self.get_current_video_frames())
+        )
+        
         self.progressBar.setMaximum(self.input_video["frames_count"])
 
     def render_image(self):
@@ -557,73 +637,84 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
         
         if image.shape[1] % 4 != 0:
             image = trim_to_4width(image)
-        
-        image = self.nt_process(image)
-        
+            
+        image = self.videoRenderer.apply_main_effect(self.nt, frame1=image)
         is_success, im_buf_arr = cv2.imencode(".png", image)
         
         if not is_success:
-            self.update_status("erro ao tentar salvar (!is_success)")
+            self.update_status("erro ao salvar (!is_success)")
             
             return None
         
         im_buf_arr.tofile(target_file)
 
     def render_video(self):
-        target_file = pick_save_file(self, title='renderizar vídeo como', suffix='.mp4')
-
+        if self.input_video['suffix'] == ".gif":
+            suffix = self.input_video['suffix']
+        else:
+            suffix = self.__video_output_suffix
+            
+        target_file = pick_save_file(self, title='renderizar vídeo como', suffix=suffix)
+        
         if not target_file:
             return None
-
+        
         render_data = {
             "target_file": target_file,
-            "nt": self.nt,
+            "vhs": self.vhs,
             "input_video": self.input_video,
+            
             "input_heigth": self.renderHeightBox.value(),
             "upscale_2x": self.NearestUpScale.isChecked()
         }
         
         self.setup_renderer()
         self.toggle_main_effect()
+        self.lossless_exporting()
+        self.audio_filtering()
+        
         self.progressBar.setValue(1)
         self.videoRenderer.render_data = render_data
         self.thread.start()
 
-    def nt_process(self, frame) -> ndarray:
-        _ = self.nt.composite_layer(frame, frame, field=2, fieldno=2)
+    def vhs_process(self, frame) -> ndarray:
+        _ = self.vhs.composite_layer(frame, frame, field=2, fieldno=2)
         
-        ntsc_out_image = cv2.convertScaleAbs(_)
-        ntsc_out_image[1:-1:2] = ntsc_out_image[0:-2:2] / 2 + ntsc_out_image[2::2] / 2
+        vhs_out_image = cv2.convertScaleAbs(_)
+        vhs_out_image[1:-1:2] = vhs_out_image[0:-2:2] / 2 + vhs_out_image[2::2] / 2
         
-        return ntsc_out_image
+        return vhs_out_image
 
-    def nt_update_preview(self):
+    def vhs_update_preview(self):
         current_frame_valid = isinstance(self.current_frame, ndarray)
+        
         render_on_pause = self.pauseRenderButton.isChecked()
         
         if not current_frame_valid or (self.isRenderActive and not render_on_pause):
             return None
 
         if not self.mainEffect:
-            self.render_preview(self.preview)
+            self.render_preview(self.current_frame)
             
             return None
 
-        ntsc_out_image = self.nt_process(self.preview)
+        vhs_out_image = self.videoRenderer.apply_main_effect(self.nt, self.current_frame, self.next_frame)
 
         if self.compareMode:
-            ntsc_out_image = numpy.concatenate((self.preview[:self.preview.shape[0] // 2], ntsc_out_image[ntsc_out_image.shape[0] // 2:]))
+            vhs_out_image = numpy.concatenate(
+                (self.current_frame[:self.current_frame.shape[0] // 2], vhs_out_image[vhs_out_image.shape[0] // 2:])
+            )
 
-        self.render_preview(ntsc_out_image)
-        
+        self.render_preview(vhs_out_image)
+
     def export_import_config(self):
-        config = self.nt_get_config()
+        config = self.vhs_get_config()
         config_json = json.dumps(config, indent=2)
-        
+
         dialog = ConfigDialog()
         dialog.configJsonTextField.setPlainText(config_json)
         dialog.configJsonTextField.selectAll()
-        
+
         code = dialog.exec_()
         
         if code:
@@ -635,18 +726,18 @@ class VhsApp(QtWidgets.QMainWindow, mainWindow.Ui_MainWindow):
     @QtCore.pyqtSlot(object)
     def render_preview(self, img: ndarray):
         # https://stackoverflow.com/questions/41596940/qimage-skews-some-images-but-not-others
-        
+
         height, width, _ = img.shape
         
-        # calcular o número total de bytes em um frame
+        # calcular o número total de bytes no quadro
         totalBytes = img.nbytes
         
-        # dividir pelo número de rows
+        # divida pelo número de linhas
         bytesPerLine = int(totalBytes / height)
-        
+
         image = QtGui.QImage(img.tobytes(), width, height, bytesPerLine, QtGui.QImage.Format_RGB888) \
             .rgbSwapped()
-            
+
         max_h = self.image_frame.height()
         
         if height > max_h:

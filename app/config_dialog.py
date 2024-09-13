@@ -15,7 +15,7 @@ class ConfigDialog(QDialog, configExportDialog.Ui_TemplateConfigDialog):
         # self.connect(self.pushButton_Ok, SIGNAL("clicked()"), self.clickedOk)
         # self.connect(self.pushButton_Cancel, SIGNAL("clicked()"), self.clickedCancel)
 
-        # Alternativly I have tríed the following without improvement:
+        # como alternativa, tentei o seguinte sem melhorias:
         # self.pushButton_Ok.clicked.connect(self.clickedOk)
         # QObject.connect(self.pushButton_Cancel, SIGNAL("clicked()"), self.clickedCancel)
 
@@ -29,4 +29,4 @@ class ConfigDialog(QDialog, configExportDialog.Ui_TemplateConfigDialog):
         
     @QtCore.pyqtSlot()
     def clickedOk(self):
-        print("ok") # questão: por que nada acontece aqui?
+        print("ok")

@@ -1,6 +1,7 @@
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import QSlider
 
+
 class DoubleSlider(QSlider):
     mouseRelease = QtCore.pyqtSignal(object)
     

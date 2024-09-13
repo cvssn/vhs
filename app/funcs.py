@@ -15,9 +15,10 @@ def resize_to_height(wh, target_h):
 
 def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = None) -> Path:
     pick_filter = f"arquivo {suffix} (*{suffix});;todos os arquivos (*)"
+    
     target_file = QFileDialog.getSaveFileName(self, title, '', pick_filter)
     
-    logger.debug(f"salvamento escolhido como: {target_file}")
+    logger.debug(f"salvamento em: {target_file}")
     
     if not target_file[0]:
         return None
@@ -26,13 +27,13 @@ def pick_save_file(self, title='renderizar como', pre_path='', suffix: str = Non
     
     if path.suffix != suffix:
         path = path.parent / (path.name + suffix)
-    
+        
     return path
 
 
 def trim_to_4width(img: numpy.ndarray) -> numpy.ndarray:
     """
-    trabalhar com crash caso a imagem não seja dividida por 4
+    solução alternativa de crash caso a imagem não tenha sido dividida por 4
     """
     height, width, channels = img.shape
     
@@ -42,14 +43,14 @@ def trim_to_4width(img: numpy.ndarray) -> numpy.ndarray:
         img = img[:, :width % 4 * -1]
         height, width, channels = img.shape
         
-        logger.debug(f"┗ corrigido para o wh: {width}x{height} w % 4 = {width % 4}")
+        logger.debug(f"┗ corrigido para wh: {width}x{height} w % 4 = {width % 4}")
         
     return img
 
 
 def expand_to_4width(img: numpy.ndarray) -> numpy.ndarray:
     """
-    solução alternativa para falha se a imagem não for dividida por 4
+    solução alternativa de crash caso a imagem não tenha sido dividida por 4
     """
     height, width, channels = img.shape
     
@@ -61,6 +62,17 @@ def expand_to_4width(img: numpy.ndarray) -> numpy.ndarray:
         img = numpy.concatenate((img, img[:, -1:(d + 1) * -1:-1]), axis=1)
         height, width, channels = img.shape
         
-        logger.debug(f"┗ corrigido para o wh: {width}x{height} w % 4 = {width % 4}")
+        logger.debug(f"┗ corrigido para wh: {width}x{height} w % 4 = {width % 4}")
         
     return img
+
+
+def set_ui_element(element, value):
+    element.blockSignals(True)
+    
+    if isinstance(value, bool):
+        element.setChecked(value)
+    elif isinstance(value, (int, float)):
+        element.setValue(value)
+        
+    element.blockSignals(False)

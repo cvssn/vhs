@@ -16,10 +16,9 @@ class CustomSlider(QtWidgets.QWidget):
         self.numbox.valueChanged.connect(self.slider.setValue)
         
         layout = QtWidgets.QHBoxLayout(self)
-        
         layout.addWidget(self.numbox)
         layout.addWidget(self.slider)
-        
+
     @QtCore.pyqtSlot(float)
     def setMinimum(self, minval):
         self.slider.setMinimum(minval)

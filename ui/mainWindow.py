@@ -7,7 +7,6 @@
 # aviso! qualquer mudança manual feita nesse arquivo será perdida quando o pyuic5 rodar novamente.
 # não edite esse arquivo a não ser que você saiba o que esteja fazendo.
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
@@ -17,24 +16,20 @@ class Ui_MainWindow(object):
         MainWindow.resize(1280, 852)
         
         self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.centralwidget.setEnabled(True)
         self.centralwidget.setObjectName("centralwidget")
-        
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        
         self.controlLayout = QtWidgets.QVBoxLayout()
         self.controlLayout.setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
         self.controlLayout.setObjectName("controlLayout")
-        
         self.label = QtWidgets.QLabel(self.centralwidget)
         self.label.setMaximumSize(QtCore.QSize(16777215, 29))
         self.label.setOpenExternalLinks(True)
         self.label.setObjectName("label")
         self.controlLayout.addWidget(self.label)
-        
         self.checkboxesLayout = QtWidgets.QGridLayout()
         self.checkboxesLayout.setObjectName("checkboxesLayout")
-        
         self.controlLayout.addLayout(self.checkboxesLayout)
         self.slidersLayout = QtWidgets.QVBoxLayout()
         self.slidersLayout.setObjectName("slidersLayout")
@@ -42,14 +37,13 @@ class Ui_MainWindow(object):
         self.templatesLayout = QtWidgets.QHBoxLayout()
         self.templatesLayout.setObjectName("templatesLayout")
         self.exportImportConfigButton = QtWidgets.QPushButton(self.centralwidget)
+        self.exportImportConfigButton.setToolTip("")
         self.exportImportConfigButton.setObjectName("exportImportConfigButton")
         self.templatesLayout.addWidget(self.exportImportConfigButton)
         self.controlLayout.addLayout(self.templatesLayout)
         self.horizontalLayout_3.addLayout(self.controlLayout)
-        
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        
         self.image_frame = QtWidgets.QLabel(self.centralwidget)
         
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
@@ -63,12 +57,9 @@ class Ui_MainWindow(object):
         self.image_frame.setScaledContents(False)
         self.image_frame.setAlignment(QtCore.Qt.AlignCenter)
         self.image_frame.setObjectName("image_frame")
-        
         self.verticalLayout.addWidget(self.image_frame)
-        
         self.positionControlLayout = QtWidgets.QHBoxLayout()
         self.positionControlLayout.setObjectName("positionControlLayout")
-        
         self.refreshFrameButton = QtWidgets.QPushButton(self.centralwidget)
         
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -81,8 +72,7 @@ class Ui_MainWindow(object):
         self.refreshFrameButton.setMaximumSize(QtCore.QSize(27, 28))
         self.refreshFrameButton.setObjectName("refreshFrameButton")
         self.positionControlLayout.addWidget(self.refreshFrameButton)
-        
-        self.videoTrackSlider = QtWidgets.QScrollBar(self.centralwidget)
+        self.videoTrackSlider = QtWidgets.QSlider(self.centralwidget)
         self.videoTrackSlider.setTabletTracking(False)
         self.videoTrackSlider.setAutoFillBackground(False)
         self.videoTrackSlider.setMinimum(1)
@@ -91,20 +81,45 @@ class Ui_MainWindow(object):
         self.videoTrackSlider.setOrientation(QtCore.Qt.Horizontal)
         self.videoTrackSlider.setInvertedControls(True)
         self.videoTrackSlider.setObjectName("videoTrackSlider")
-        
         self.positionControlLayout.addWidget(self.videoTrackSlider)
-        
         self.livePreviewCheckbox = QtWidgets.QCheckBox(self.centralwidget)
         self.livePreviewCheckbox.setMaximumSize(QtCore.QSize(136, 16777215))
         self.livePreviewCheckbox.setToolTip("")
         self.livePreviewCheckbox.setObjectName("livePreviewCheckbox")
-        
         self.positionControlLayout.addWidget(self.livePreviewCheckbox)
         self.verticalLayout.addLayout(self.positionControlLayout)
-        
         self.gridLayout_2 = QtWidgets.QGridLayout()
         self.gridLayout_2.setObjectName("gridLayout_2")
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_2.addWidget(self.label_2, 1, 1, 1, 1)
+        self.renderHeightBox = QtWidgets.QSpinBox(self.centralwidget)
+        self.renderHeightBox.setMaximum(3000)
+        self.renderHeightBox.setSingleStep(120)
+        self.renderHeightBox.setObjectName("renderHeightBox")
+        self.gridLayout_2.addWidget(self.renderHeightBox, 1, 2, 1, 1)
+        self.NearestUpScale = QtWidgets.QCheckBox(self.centralwidget)
+        self.NearestUpScale.setObjectName("NearestUpScale")
+        self.gridLayout_2.addWidget(self.NearestUpScale, 2, 1, 1, 1)
+        self.compareModeButton = QtWidgets.QCheckBox(self.centralwidget)
+        self.compareModeButton.setObjectName("compareModeButton")
+        self.gridLayout_2.addWidget(self.compareModeButton, 2, 4, 1, 1)
+        self.seedSpinBox = QtWidgets.QSpinBox(self.centralwidget)
         
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        
+        self.seedSpinBox.setFont(font)
+        self.seedSpinBox.setObjectName("seedSpinBox")
+        self.gridLayout_2.addWidget(self.seedSpinBox, 1, 4, 1, 1)
+        self.toggleMainEffect = QtWidgets.QCheckBox(self.centralwidget)
+        self.toggleMainEffect.setChecked(True)
+        self.toggleMainEffect.setObjectName("toggleMainEffect")
+        self.gridLayout_2.addWidget(self.toggleMainEffect, 2, 3, 1, 1)
+        self.ProMode = QtWidgets.QCheckBox(self.centralwidget)
+        self.ProMode.setObjectName("ProMode")
+        self.gridLayout_2.addWidget(self.ProMode, 2, 2, 1, 1)
         self.seedLabel = QtWidgets.QLabel(self.centralwidget)
         self.seedLabel.setMaximumSize(QtCore.QSize(85, 16777215))
         
@@ -118,47 +133,11 @@ class Ui_MainWindow(object):
         self.seedLabel.setAutoFillBackground(False)
         self.seedLabel.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.seedLabel.setObjectName("seedLabel")
-        
         self.gridLayout_2.addWidget(self.seedLabel, 1, 3, 1, 1)
-        self.seedSpinBox = QtWidgets.QSpinBox(self.centralwidget)
-        
-        font = QtGui.QFont()
-        font.setPointSize(13)
-        
-        self.seedSpinBox.setFont(font)
-        self.seedSpinBox.setObjectName("seedSpinBox")
-        
-        self.gridLayout_2.addWidget(self.seedSpinBox, 1, 4, 1, 1)
-        self.toggleMainEffect = QtWidgets.QCheckBox(self.centralwidget)
-        self.toggleMainEffect.setChecked(True)
-        self.toggleMainEffect.setObjectName("toggleMainEffect")
-        
-        self.gridLayout_2.addWidget(self.toggleMainEffect, 2, 3, 1, 1)
-        self.ProMode = QtWidgets.QCheckBox(self.centralwidget)
-        self.ProMode.setObjectName("ProMode")
-        
-        self.gridLayout_2.addWidget(self.ProMode, 2, 2, 1, 1)
-        self.renderHeightBox = QtWidgets.QSpinBox(self.centralwidget)
-        self.renderHeightBox.setMaximum(3000)
-        self.renderHeightBox.setSingleStep(120)
-        self.renderHeightBox.setObjectName("renderHeightBox")
-        
-        self.gridLayout_2.addWidget(self.renderHeightBox, 1, 2, 1, 1)
-        self.compareModeButton = QtWidgets.QCheckBox(self.centralwidget)
-        self.compareModeButton.setObjectName("compareModeButton")
-        
-        self.gridLayout_2.addWidget(self.compareModeButton, 2, 4, 1, 1)
-        self.label_2 = QtWidgets.QLabel(self.centralwidget)
-        self.label_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.label_2.setObjectName("label_2")
-        
-        self.gridLayout_2.addWidget(self.label_2, 1, 1, 1, 1)
-        self.NearestUpScale = QtWidgets.QCheckBox(self.centralwidget)
-        self.NearestUpScale.setObjectName("NearestUpScale")
-        
-        self.gridLayout_2.addWidget(self.NearestUpScale, 2, 1, 1, 1)
+        self.LossLessCheckBox = QtWidgets.QCheckBox(self.centralwidget)
+        self.LossLessCheckBox.setObjectName("LossLessCheckBox")
+        self.gridLayout_2.addWidget(self.LossLessCheckBox, 2, 5, 1, 1)
         self.verticalLayout.addLayout(self.gridLayout_2)
-        
         self.statusLabel = QtWidgets.QLabel(self.centralwidget)
         
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
@@ -170,35 +149,24 @@ class Ui_MainWindow(object):
         self.statusLabel.setText("")
         self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.statusLabel.setObjectName("statusLabel")
-        
         self.verticalLayout.addWidget(self.statusLabel)
-        
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        
         self.openFile = QtWidgets.QPushButton(self.centralwidget)
         self.openFile.setObjectName("openFile")
-        
         self.horizontalLayout_4.addWidget(self.openFile)
-        
         self.openImageUrlButton = QtWidgets.QToolButton(self.centralwidget)
         self.openImageUrlButton.setObjectName("openImageUrlButton")
-        
         self.horizontalLayout_4.addWidget(self.openImageUrlButton)
-        
         self.verticalLayout.addLayout(self.horizontalLayout_4)
-        
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
         self.progressBar.setEnabled(True)
         self.progressBar.setMaximum(116)
         self.progressBar.setProperty("value", 24)
         self.progressBar.setObjectName("progressBar")
-        
         self.verticalLayout.addWidget(self.progressBar)
-        
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        
         self.renderVideoButton = QtWidgets.QPushButton(self.centralwidget)
         self.renderVideoButton.setEnabled(True)
         
@@ -211,7 +179,6 @@ class Ui_MainWindow(object):
         self.renderVideoButton.setMinimumSize(QtCore.QSize(360, 0))
         self.renderVideoButton.setBaseSize(QtCore.QSize(0, 0))
         self.renderVideoButton.setObjectName("renderVideoButton")
-        
         self.horizontalLayout.addWidget(self.renderVideoButton)
         self.saveImageButton = QtWidgets.QPushButton(self.centralwidget)
         self.saveImageButton.setObjectName("saveImageButton")
@@ -236,16 +203,15 @@ class Ui_MainWindow(object):
         self.pauseRenderButton.setIconSize(QtCore.QSize(16, 16))
         self.pauseRenderButton.setCheckable(True)
         self.pauseRenderButton.setObjectName("pauseRenderButton")
-        
         self.horizontalLayout.addWidget(self.pauseRenderButton)
         self.stopRenderButton = QtWidgets.QPushButton(self.centralwidget)
         self.stopRenderButton.setEnabled(False)
         self.stopRenderButton.setMaximumSize(QtCore.QSize(138, 16777215))
         self.stopRenderButton.setObjectName("stopRenderButton")
-        
         self.horizontalLayout.addWidget(self.stopRenderButton)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.horizontalLayout_3.addLayout(self.verticalLayout)
+        
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
@@ -260,21 +226,22 @@ class Ui_MainWindow(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'Noto Sans\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">dê uma olhada nas atualizações e estrelas: <a href=\"https://github.com/JargeZ/vhs\"><span style=\" text-decoration: underline; color:#0057ae;\">github/cvssn/vhs</span></a></p></body></html>"))
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Check for updates and stargazes: <a href=\"https://github.com/cvssn/vhs\"><span style=\" text-decoration: underline; color:#0057ae;\">github/cvssn/vhs</span></a></p></body></html>"))
         
-        self.exportImportConfigButton.setText(_translate("MainWindow", "importar / exportar preset"))
-        self.image_frame.setText(_translate("MainWindow", "ImageFrameTextLabel"))
+        self.exportImportConfigButton.setText(_translate("MainWindow", "📝"))
+        self.image_frame.setText(_translate("MainWindow", "nenhuma imagem/vídeo/gif selecionado. ❓"))
         self.refreshFrameButton.setText(_translate("MainWindow", "🔄"))
         self.livePreviewCheckbox.setText(_translate("MainWindow", "livepreview"))
-        self.seedLabel.setText(_translate("MainWindow", "seed"))
-        self.toggleMainEffect.setText(_translate("MainWindow", "on/off"))
-        self.ProMode.setText(_translate("MainWindow", "modo pro"))
+        self.label_2.setText(_translate("MainWindow", "altura de renderização"))
+        self.NearestUpScale.setText(_translate("MainWindow", "saída x2 por nearest-neighbor"))
         self.compareModeButton.setText(_translate("MainWindow", "comparar modo"))
-        self.label_2.setText(_translate("MainWindow", "renderizar altura"))
-        self.NearestUpScale.setText(_translate("MainWindow", "output x2 pelo nearest-neighbor"))
+        self.toggleMainEffect.setText(_translate("MainWindow", "on/off"))
+        self.ProMode.setText(_translate("MainWindow", "modo profissional"))
+        self.seedLabel.setText(_translate("MainWindow", "seed"))
+        self.LossLessCheckBox.setText(_translate("MainWindow", "exportar .mkv sem perdas"))
         self.openFile.setText(_translate("MainWindow", "abrir arquivo (vídeo ou imagem)"))
         self.openImageUrlButton.setText(_translate("MainWindow", "abrir url da imagem"))
         self.renderVideoButton.setText(_translate("MainWindow", "renderizar vídeo como"))
         self.saveImageButton.setText(_translate("MainWindow", "salvar imagem"))
-        self.pauseRenderButton.setText(_translate("MainWindow", "⏸ pausar renderizador"))
-        self.stopRenderButton.setText(_translate("MainWindow", "encerrar renderização"))
+        self.pauseRenderButton.setText(_translate("MainWindow", "⏸ pausar renderização"))
+        self.stopRenderButton.setText(_translate("MainWindow", "parar renderização"))
