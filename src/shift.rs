@@ -1,5 +1,13 @@
+pub enum BoundaryHandling {
+    /// repete o pixel limite indefinidamente
+    Extend,
+
+    /// utiliza uma constante específica para o limite
+    Constant(f64)
+}
+
 /// desloca uma linha por um valor não inteiro usando interpolação linear
-pub fn shift_row(row: &mut [f64], shift: f64) {
+pub fn shift_row(row: &mut [f64], shift: f64, boundary_handling: BoundaryHandling) {
     // diminui a mudança (as conversões são arredondadas para zero)
     let shift_int = shift as i64 - if shift < 0.0 {
         1
@@ -7,9 +15,19 @@ pub fn shift_row(row: &mut [f64], shift: f64) {
         0
     };
 
-    // faz a parte inteira do deslocamento
     let width = row.len();
 
+    let boundary_value = match boundary_handling {
+        BoundaryHandling::Extend => if shift > 0.0 {
+            row[0]
+        } else {
+            row[width - 1]
+        },
+
+        BoundaryHandling::Constant(value) => value
+    };
+
+    // faz a parte inteira do deslocamento
     if shift_int > 0 {
         let offset = shift_int as usize;
         
@@ -17,7 +35,7 @@ pub fn shift_row(row: &mut [f64], shift: f64) {
             row[i] = if i >= offset {
                 row[i - offset]
             } else {
-                row[0]
+                boundary_value
             }
         }
     } else {
@@ -27,7 +45,7 @@ pub fn shift_row(row: &mut [f64], shift: f64) {
             row[i] = if i + offset < width {
                 row[i + offset]
             } else {
-                row[width - 1]
+                boundary_value
             }
         }
     }

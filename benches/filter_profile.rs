@@ -1,7 +1,7 @@
 extern crate criterion;
 use criterion::{criterion_group, criterion_main, Criterion};
 use image::io::Reader as ImageReader;
-use vhs::ntsc::NtscEffect;
+use ntscrs::ntsc::NtscEffect;
 use pprof::criterion::{Output, PProfProfiler};
 
 fn criterion_benchmark(c: &mut Criterion) {

@@ -1,5 +1,5 @@
-use vhs::filter::{TransferFunction, StateSpace, polynomial_multiply};
-use vhs::ntsc::{NtscEffect, make_lowpass};
+use ntscrs::filter::{TransferFunction, StateSpace, polynomial_multiply};
+use ntscrs::ntsc::{NtscEffect, make_lowpass};
 
 use image::ImageFormat;
 use image::io::Reader as ImageReader;

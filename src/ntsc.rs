@@ -9,8 +9,8 @@ use simdnoise::NoiseBuilder;
 
 use crate::{
     filter::{StateSpace, TransferFunction},
-    random::key_seed,
-    shift::shift_row
+    random::{key_seed, Geometric},
+    shift::{shift_row, BoundaryHandling}
 };
 
 const YIQ_MATRIX: Matrix3<f64> = matrix![
@@ -332,20 +332,15 @@ fn luma_into_chroma_line(
     }
 }
 
-fn video_noise_line(
+fn video_noise_line<R: Rng>(
     row: &mut [f64],
     width: usize,
     
-    seed: u64,
-    key: u64,
+    rng: &mut R,
 
-    frame_num: usize,
     frequency: f64,
-    intensity: f64,
-    line_num: usize
+    intensity: f64
 ) {
-    let keyed_seed = key_seed(seed, key, line_num, frame_num);
-    let mut rng = SplitMix64::seed_from_u64(keyed_seed);
     let noise_seed = rng.next_u32();
     let offset = rng.gen::<f64>() * width as f64;
 
@@ -367,77 +362,184 @@ fn composite_noise(
     intensity: f64,
     frame_num: usize
 ) {
-    const VIDEO_COMPOSITE_NOISE_SEED: u64 = 0;
-
     let width = yiq.resolution.0;
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::VIDEO_COMPOSITE, frame_num));
 
-    yiq.y
-        .chunks_mut(width)
-        .enumerate()
-        .for_each(|(index, row)| {
-            video_noise_line(
-                row,
-                width,
-                seed,
-                VIDEO_COMPOSITE_NOISE_SEED,
-                frame_num,
-                frequency,
-                intensity,
-                index
-            );
-        });
+    yiq.y.chunks_mut(width).for_each(|row| {
+        video_noise_line(row, width, &mut rng, frequency, intensity);
+    });
+}
+
+mod noise_seeds {
+    pub const VIDEO_COMPOSITE: u64 = 0;
+    pub const VIDEO_CHROMA: u64 = 1;
+    pub const HEAD_SWITCHING: u64 = 2;
+    pub const HEAD_SWITCHING_PHASE: u64 = 3;
+    pub const VIDEO_CHROMA_PHASE: u64 = 4;
+    pub const EDGE_WAVE: u64 = 5;
+    pub const SNOW: u64 = 6;
 }
 
 fn chroma_noise(yiq: &mut YiqPlanar, seed: u64, frequency: f64, intensity: f64, frame_num: usize) {
-    const VIDEO_CHROMA_NOISE_SEED: u64 = 1;
-
     let width = yiq.resolution.0;
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::VIDEO_CHROMA, frame_num));
 
     yiq.i
         .chunks_mut(width)
         .zip(yiq.q.chunks_mut(width))
-        .enumerate()
-        .for_each(|(index, (i, q))| {
-            video_noise_line(
-                i,
-                width,
-                seed,
-                VIDEO_CHROMA_NOISE_SEED,
-                frame_num,
-                frequency,
-                intensity,
-                index
-            );
-
-            video_noise_line(
-                q,
-                width,
-                seed,
-                VIDEO_CHROMA_NOISE_SEED,
-                frame_num,
-                frequency,
-                intensity,
-                index
-            );
+        .for_each(|(i, q)| {
+            video_noise_line(i, width, &mut rng, frequency, intensity);
+            video_noise_line(q, width, &mut rng, frequency, intensity);
         });
 }
 
-fn head_switching_noise(yiq: &mut YiqPlanar, seed: u64, speed: f64, frame_num: usize) {
-    // todo
+fn chroma_phase_noise(yiq: &mut YiqPlanar, seed: u64, intensity: f64, frame_num: usize) {
+    let width = yiq.resolution.0;
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::VIDEO_CHROMA_PHASE, frame_num));
+
+    yiq.i
+        .chunks_mut(width)
+        .zip(yiq.q.chunks_mut(width))
+        .for_each(|(i, q)| {
+            // ângulo de mudança de fase em radianos. Mapeado de forma que uma intensidade de 1,0 seja uma mudança de fase que varia de uma
+            // rotação para a esquerda - uma rotação completa para a direita.
+            let phase_shift = (rng.gen::<f64>() - 0.5) * core::f64::consts::PI * 4.0 * intensity;
+            let (sin_angle, cos_angle) = phase_shift.sin_cos();
+
+            for (i, q) in i.iter_mut().zip(q.iter_mut()) {
+                // tratar (i, q) como um vetor 2D e gire-o pela quantidade de mudança de fase.
+                let rotated_i = (*i * cos_angle) - (*q * sin_angle);
+                let rotated_q = (*i * sin_angle) + (*q * cos_angle);
+
+                *i = rotated_i;
+                *q = rotated_q;
+            }
+        });
+}
+
+fn head_switching(
+    yiq: &mut YiqPlanar,
+    num_rows: usize,
+    offset: usize,
+    shift: f64,
+    seed: u64,
+    frame_num: usize
+) {
+    let (width, height) = yiq.resolution;
+    let num_affected_rows = num_rows - offset;
+
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::HEAD_SWITCHING_PHASE, frame_num));
+
+    for row_idx in 0..num_affected_rows {
+        let dst_row_idx = height - 1 - row_idx;
+        let row = &mut yiq.y[width * dst_row_idx..width * (dst_row_idx + 1)];
+
+        let row_shift = shift * ((row_idx + offset) as f64 / num_rows as f64).powf(1.5);
+        
+        shift_row(
+            row,
+            row_shift + (rng.gen::<f64>() - 0.5),
+            BoundaryHandling::Constant(0.0)
+        );
+    }
+}
+
+// 4 pixels entre os zeros do transiente do speckle
+const SPECKLE_TRANSIENT_FREQUENCY: usize = 8;
+
+fn row_speckles<R: Rng>(row: &mut [f64], rng: &mut R, intensity: f64) {
+    if intensity <= 0.0 {
+        return;
+    }
+
+    // transforma cada pixel em "neve" com probabilidade snow_intensity * intensity_scale
+    //
+    // podemos simular a distância entre cada pixel de "neve" com uma distribuição geométrica que evita ter que
+    // percorrer cada pixel
+    let dist = Geometric::new(intensity);
+    let mut pixel_idx = 0usize;
+
+    loop {
+        pixel_idx += rng.sample(&dist);
+
+        if pixel_idx >= row.len() {
+            break;
+        }
+
+        let transient_len = 2;
+
+        for i in pixel_idx..(pixel_idx + (transient_len * SPECKLE_TRANSIENT_FREQUENCY)).min(row.len()) {
+            let x = (i - pixel_idx) as f64;
+
+            // simula o transitório com sin(pi*x / 4) * (1 - x/len)^2
+            row[i] += ((x * core::f64::consts::PI) / SPECKLE_TRANSIENT_FREQUENCY as f64).sin()
+                * (1.0 - x / (transient_len * SPECKLE_TRANSIENT_FREQUENCY) as f64).powi(2)
+                * 2.0
+                * rng.gen::<f64>();
+        }
+
+        // certifique-se de avançar o índice de pixels a cada vez. nossa distribuição geométrica nos dá o tempo entre
+        // eventos sucessivos, que podem ser 0 para probabilidades muito altas.
+        pixel_idx += 1;
+    }
+}
+
+fn head_switching_noise(
+    yiq: &mut YiqPlanar,
+    seed: u64,
+    height: usize,
+    wave_intensity: f64,
+    snow_intensity: f64,
+    frame_num: usize
+) {
+    let width = yiq.resolution.0;
+
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::HEAD_SWITCHING, frame_num));
+    let noise_seed = rng.next_u32();
+    let offset = rng.gen::<f32>() * yiq.resolution.1 as f32;
+
+    let shift_noise = NoiseBuilder::gradient_1d_offset(offset as f32, height)
+        .with_seed(noise_seed as i32)
+        .with_freq(0.5)
+        .generate()
+        .0;
+
+    for row_idx in 0..height {
+        // isso itera de cima para baixo. aumenta a intensidade à medida que nos aproximamos da parte inferior da imagem.
+        let intensity_scale = row_idx as f64 / height as f64;
+        let dst_row_idx = yiq.resolution.1 - 1 - row_idx;
+        let row = &mut yiq.y[width * dst_row_idx..width * (dst_row_idx + 1)];
+
+        shift_row(
+            row,
+            shift_noise[row_idx] as f64 * intensity_scale * wave_intensity * 0.25,
+            BoundaryHandling::Constant(0.0)
+        );
+
+        row_speckles(row, &mut rng, snow_intensity * intensity_scale);
+    }
+}
+
+fn snow(yiq: &mut YiqPlanar, seed: u64, intensity: f64, frame_num: usize) {
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::SNOW, frame_num));
+
+    for row in yiq.y.chunks_mut(yiq.resolution.0) {
+        row_speckles(row, &mut rng, intensity);
+    }
 }
 
 fn vhs_edge_wave(yiq: &mut YiqPlanar, seed: u64, intensity: f64, frame_num: usize) {
-    const EDGE_WAVE_NOISE_SEED: u64 = 0;
-
     let width = yiq.resolution.0;
 
-    let mut rng = SmallRng::seed_from_u64(key_seed(seed, EDGE_WAVE_NOISE_SEED, 0, frame_num));
+    let mut rng = SmallRng::seed_from_u64(key_seed(seed, noise_seeds::EDGE_WAVE, frame_num));
     let noise_seed = rng.next_u32();
+
+    // todo: amostrar o ruído perlin em domínio de tempo
     let offset = rng.gen::<f32>() * yiq.resolution.1 as f32;
     
     let noise = NoiseBuilder::gradient_1d_offset(offset as f32, width)
         .with_seed(noise_seed as i32)
-        .with_freq(0.5)
+        .with_freq(0.05)
         .generate()
         .0;
 
@@ -447,7 +549,8 @@ fn vhs_edge_wave(yiq: &mut YiqPlanar, seed: u64, intensity: f64, frame_num: usiz
             .enumerate()
             .for_each(|(index, row)| {
                 let shift = (noise[index] as f64) * intensity * 0.25;
-                shift_row(row, shift as f64);
+
+                shift_row(row, shift as f64, BoundaryHandling::Extend);
             })
     }
 }
@@ -507,8 +610,10 @@ pub struct NtscEffect {
     pub chroma_lowpass_out: bool,
     pub video_scanline_phase_shift: PhaseShift,
     pub video_scanline_phase_shift_offset: i32,
+    pub composite_preemphasis: f64,
     pub composite_noise_intensity: f64,
     pub chroma_noise_intensity: f64,
+    pub snow_intensity: f64,
     pub chroma_phase_noise_intensity: f64,
     pub vhs_settings: Option<VHSSettings>
 }
@@ -518,17 +623,24 @@ impl Default for NtscEffect {
         Self {
             chroma_lowpass_in: true,
             chroma_lowpass_out: true,
+            
+            composite_preemphasis: 1.0,
+            
             video_scanline_phase_shift: PhaseShift::Degrees90,
             video_scanline_phase_shift_offset: 0,
+
+            snow_intensity: 0.00001,
+
             composite_noise_intensity: 0.01,
+            
             chroma_noise_intensity: 0.1,
-            chroma_phase_noise_intensity: 0.1,
+            chroma_phase_noise_intensity: 0.001,
 
             vhs_settings: Some(VHSSettings {
                 tape_speed: VHSTapeSpeed::LP,
-                chroma_vert_blend: false,
-                sharpen: 4.0,
-                edge_wave: 1.0
+                chroma_vert_blend: true,
+                sharpen: 1.0,
+                edge_wave: 2.0
             })
         }
     }
@@ -538,13 +650,26 @@ impl NtscEffect {
     pub fn apply_effect(&self, input_frame: &RgbImage, frame_num: usize, seed: u64) -> RgbImage {
         let mut yiq = YiqPlanar::from_image(input_frame, YiqField::Lower);
 
-        let (width, height) = yiq.resolution;
+        let (width, _) = yiq.resolution;
 
         if self.chroma_lowpass_in {
             composite_chroma_lowpass(&mut yiq);
         }
 
         self.chroma_into_luma(&mut yiq, 50.0, 1);
+
+        if self.composite_preemphasis > 0.0 {
+            let preemphasis_filter = make_lowpass(315000000.0 / 88.0 / 2.0, NTSC_RATE);
+
+            filter_plane(
+                &mut yiq.y,
+                width,
+                &preemphasis_filter,
+                0.0,
+                -self.composite_preemphasis,
+                0
+            );
+        }
 
         if self.composite_noise_intensity > 0.0 {
             composite_noise(
@@ -556,7 +681,12 @@ impl NtscEffect {
             );
         }
 
-        head_switching_noise(&mut yiq, seed, 0.0, frame_num);
+        if self.snow_intensity > 0.0 {
+            snow(&mut yiq, seed, self.snow_intensity, frame_num);
+        }
+
+        head_switching_noise(&mut yiq, seed, 24, 2.0, 0.005, frame_num);
+        head_switching(&mut yiq, 8, 3, 72.0, seed, frame_num);
 
         self.luma_into_chroma(&mut yiq, 50.0, 1);
 
@@ -565,7 +695,7 @@ impl NtscEffect {
         }
 
         if self.chroma_phase_noise_intensity > 0.0 {
-            // todo
+            chroma_phase_noise(&mut yiq, seed, self.chroma_phase_noise_intensity, frame_num);
         }
 
         if let Some(vhs_settings) = &self.vhs_settings {

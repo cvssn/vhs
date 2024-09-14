@@ -1,7 +1,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use image::io::Reader as ImageReader;
-use vhs::filter::{TransferFunction, StateSpace};
-use vhs::ntsc::{NtscEffect};
+use ntscrs::filter::{TransferFunction, StateSpace};
+use ntscrs::ntsc::{NtscEffect};
 
 fn fibonacci(n: u64) -> u64 {
     match n {
