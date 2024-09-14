@@ -5,6 +5,7 @@ use macros::FullSettings;
 use nalgebra::{matrix, Matrix3, Vector3};
 use rand::{rngs::SmallRng, Rng, RngCore, SeedableRng};
 use simdnoise::NoiseBuilder;
+use core::f64::consts::PI;
 
 use crate::{
     filter::TransferFunction,
@@ -38,7 +39,7 @@ struct YiqPlanar {
 /// cria um filtro passa-baixo com os parâmetros fornecidos, que pode então ser usado para filtrar um sinal
 pub fn make_lowpass(cutoff: f64, rate: f64) -> TransferFunction {
     let time_interval = 1.0 / rate;
-    let tau = (cutoff * 2.0 * core::f64::consts::PI).recip();
+    let tau = (cutoff * 2.0 * PI).recip();
     let alpha = time_interval / (tau + time_interval);
 
     TransferFunction::new(vec![alpha], vec![1.0, -(1.0 - alpha)])
@@ -48,7 +49,7 @@ pub fn make_lowpass(cutoff: f64, rate: f64) -> TransferFunction {
 /// isso é equivalente a aplicar o mesmo filtro lowpass 3 vezes
 pub fn make_lowpass_triple(cutoff: f64, rate: f64) -> TransferFunction {
     let time_interval = 1.0 / rate;
-    let tau = (cutoff * 2.0 * core::f64::consts::PI).recip();
+    let tau = (cutoff * 2.0 * PI).recip();
     let alpha = time_interval / (tau + time_interval);
 
     let tf = TransferFunction::new(vec![alpha], vec![1.0, -(1.0 - alpha)]);
@@ -56,34 +57,54 @@ pub fn make_lowpass_triple(cutoff: f64, rate: f64) -> TransferFunction {
     &(&tf * &tf) * &tf
 }
 
+pub fn make_notch_filter(freq: f64, quality: f64) -> TransferFunction {
+    if freq > 1.0 || freq < 0.0 {
+        panic!("frequência fora da faixa válida");
+    }
+
+    let bandwidth = (freq / quality) * PI;
+    let freq = freq * PI;
+
+    let beta = (bandwidth * 0.5).tan();
+
+    let gain = (1.0 + beta).recip();
+
+    let num = vec![gain, -2.0 * freq.cos() * gain, gain];
+    let den = vec![1.0, -2.0 * freq.cos() * gain, 2.0 * gain - 1.0];
+
+    TransferFunction::new(num, den)
+}
+
+/// filtra a condição inicial
+enum InitialCondition {
+    /// valor de conveniência – basta usar 0.
+    Zero,
+
+    /// define a condição inicial do filtro como uma constante.
+    Constant(f64),
+
+    /// define a condição de filtro inicial para a primeira amostra a ser filtrada.
+    FirstSample
+}
+
 /// aplica o filtro fornecido para um plano de cor
 fn filter_plane(
     plane: &mut Vec<f64>,
     width: usize,
     filter: &TransferFunction,
-    initial: f64,
+    initial: InitialCondition,
     scale: f64,
     delay: usize
 ) {
     plane.chunks_mut(width).for_each(|field| {
+        let initial = match initial {
+            InitialCondition::Zero => 0.0,
+            InitialCondition::Constant(c) => c,
+            InitialCondition::FirstSample => field[0]
+        };
+
         filter.filter_signal_in_place(field, initial, scale, delay);
     });
-}
-
-fn srgb_gamma(value: f64) -> f64 {
-    if value <= 0.0031308 {
-        value * 12.92
-    } else {
-        1.055 * (value.powf(1.0 / 2.4)) - 0.055
-    }
-}
-
-fn srgb_gamma_inv(value: f64) -> f64 {
-    if value <= 0.04045 {
-        value / 12.92
-    } else {
-        ((value + 0.055) / 1.055).powf(2.4)
-    }
 }
 
 #[derive(PartialEq, Eq)]
@@ -220,8 +241,8 @@ fn composite_chroma_lowpass(frame: &mut YiqPlanar) {
 
     let width = frame.resolution.0;
 
-    filter_plane(&mut frame.i, width, &i_filter, 0.0, 1.0, 2);
-    filter_plane(&mut frame.q, width, &q_filter, 0.0, 1.0, 4);
+    filter_plane(&mut frame.i, width, &i_filter, InitialCondition::Zero, 1.0, 2);
+    filter_plane(&mut frame.q, width, &q_filter, InitialCondition::Zero, 1.0, 4);
 }
 
 fn composite_chroma_lowpass_lite(frame: &mut YiqPlanar) {
@@ -229,8 +250,8 @@ fn composite_chroma_lowpass_lite(frame: &mut YiqPlanar) {
 
     let width = frame.resolution.0;
 
-    filter_plane(&mut frame.i, width, &filter, 0.0, 1.0, 1);
-    filter_plane(&mut frame.q, width, &filter, 0.0, 1.0, 1);
+    filter_plane(&mut frame.i, width, &filter, InitialCondition::Zero, 1.0, 1);
+    filter_plane(&mut frame.q, width, &filter, InitialCondition::Zero, 1.0, 1);
 }
 
 const I_MULT: [f64; 4] = [1.0, 0.0, -1.0, 0.0];
@@ -393,7 +414,7 @@ fn chroma_phase_noise(yiq: &mut YiqPlanar, seed: u64, intensity: f64, frame_num:
         .for_each(|(i, q)| {
             // ângulo de mudança de fase em radianos. Mapeado de forma que uma intensidade de 1,0 seja uma mudança de fase que varia de uma
             // rotação para a esquerda - uma rotação completa para a direita.
-            let phase_shift = (rng.gen::<f64>() - 0.5) * core::f64::consts::PI * 4.0 * intensity;
+            let phase_shift = (rng.gen::<f64>() - 0.5) * PI * 4.0 * intensity;
             let (sin_angle, cos_angle) = phase_shift.sin_cos();
 
             for (i, q) in i.iter_mut().zip(q.iter_mut()) {
@@ -462,7 +483,7 @@ fn row_speckles<R: Rng>(row: &mut [f64], rng: &mut R, intensity: f64) {
             let x = (i - pixel_idx) as f64;
 
             // simula o transitório com sin(pi*x / 4) * (1 - x/len)^2
-            row[i] += ((x * core::f64::consts::PI) / SPECKLE_TRANSIENT_FREQUENCY as f64).sin()
+            row[i] += ((x * PI) / SPECKLE_TRANSIENT_FREQUENCY as f64).sin()
                 * (1.0 - x / (transient_len * SPECKLE_TRANSIENT_FREQUENCY) as f64).powi(2)
                 * 2.0
                 * rng.gen::<f64>();
@@ -688,6 +709,19 @@ impl Default for HeadSwitchingNoiseSettings {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub struct RingingSettings {
+    pub frequency: f64,
+    pub power: f64,
+    pub intensity: f64
+}
+
+impl Default for RingingSettings {
+    fn default() -> Self {
+        Self { frequency: 0.45, power: 4.0, intensity: 4.0 }
+    }
+}
+
 pub struct SettingsBlock<T> {
     pub enabled: bool,
     pub settings: T
@@ -756,8 +790,11 @@ pub struct NtscEffect {
 
     #[settings_block]
     pub head_switching_noise: Option<HeadSwitchingNoiseSettings>,
-
     pub composite_noise_intensity: f64,
+
+    #[settings_block]
+    pub ringing: Option<RingingSettings>,
+
     pub chroma_noise_intensity: f64,
     pub snow_intensity: f64,
     pub chroma_phase_noise_intensity: f64,
@@ -781,8 +818,8 @@ impl Default for NtscEffect {
             head_switching: Some(HeadSwitchingSettings::default()),
             head_switching_noise: Some(HeadSwitchingNoiseSettings::default()),
 
+            ringing: Some(RingingSettings::default()),
             snow_intensity: 0.00001,
-
             composite_noise_intensity: 0.01,
             
             chroma_noise_intensity: 0.1,
@@ -820,7 +857,7 @@ impl NtscEffect {
                 &mut yiq.y,
                 width,
                 &preemphasis_filter,
-                0.0,
+                InitialCondition::Zero,
                 -self.composite_preemphasis,
                 0
             );
@@ -870,6 +907,12 @@ impl NtscEffect {
 
         self.luma_into_chroma(&mut yiq, 50.0, 1);
 
+        if let Some(ringing) = &self.ringing {
+            let notch_filter = make_notch_filter(ringing.frequency, ringing.power);
+
+            filter_plane(&mut yiq.y, width, &notch_filter, InitialCondition::FirstSample, ringing.intensity, 1);
+        }
+
         if self.chroma_noise_intensity > 0.0 {
             chroma_noise(&mut yiq, seed, 0.05, self.chroma_noise_intensity, frame_num);
         }
@@ -904,13 +947,13 @@ impl NtscEffect {
                 let luma_filter = make_lowpass_triple(luma_cut, NTSC_RATE);
                 let chroma_filter = make_lowpass_triple(chroma_cut, NTSC_RATE);
                 
-                filter_plane(&mut yiq.y, width, &luma_filter, 0.0, 1.0, 0);
-                filter_plane(&mut yiq.i, width, &chroma_filter, 0.0, 1.0, chroma_delay);
-                filter_plane(&mut yiq.q, width, &chroma_filter, 0.0, 1.0, chroma_delay);
+                filter_plane(&mut yiq.y, width, &luma_filter, InitialCondition::Zero, 1.0, 0);
+                filter_plane(&mut yiq.i, width, &chroma_filter, InitialCondition::Zero, 1.0, chroma_delay);
+                filter_plane(&mut yiq.q, width, &chroma_filter, InitialCondition::Zero, 1.0, chroma_delay);
                 
                 let luma_filter_single = make_lowpass(luma_cut, NTSC_RATE);
                 
-                filter_plane(&mut yiq.y, width, &luma_filter_single, 0.0, -1.6, 0);
+                filter_plane(&mut yiq.y, width, &luma_filter_single, InitialCondition::Zero, -1.6, 0);
             }
 
             if vhs_settings.chroma_vert_blend {
@@ -925,10 +968,10 @@ impl NtscEffect {
                     
                     filter_plane(
                         &mut yiq.y,
-                        
+
                         width,
                         &luma_sharpen_filter,
-                        0.0,
+                        InitialCondition::Zero,
                         -vhs_settings.sharpen * 2.0,
                         0
                     );

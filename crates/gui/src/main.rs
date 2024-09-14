@@ -147,6 +147,7 @@ impl eframe::App for NtscApp {
                             let _ = self.load_image(ctx, &path);
                         }
                     }
+
                     if ui.button("fechar").clicked() {
                         frame.close();
 
@@ -173,7 +174,7 @@ impl eframe::App for NtscApp {
                             .selected_text(match &self.settings.chroma_lowpass_in {
                                 ChromaLowpass::Full => "completa",
                                 ChromaLowpass::Light => "moderada",
-                                ChromaLowpass::None => "nenhuma",
+                                ChromaLowpass::None => "nenhuma"
                             }).show_ui(ui, |ui| {
                                 if ui
                                     .selectable_value(
@@ -343,6 +344,53 @@ impl eframe::App for NtscApp {
                                         
                                         -100.0..=100.0
                                     ).text("mudança horizontal")
+                                ).changed()
+                            {
+                                self.update_effect(ctx)
+                            }
+                        });
+
+                        ui.group(|ui| {
+                            if ui
+                                .checkbox(&mut self.settings.ringing.enabled, "toque")
+                                .changed()
+                            {
+                                self.update_effect(ctx);
+                            }
+
+                            ui.set_enabled(self.settings.ringing.enabled);
+
+                            if ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut self.settings.ringing.settings.frequency,
+                                        
+                                        0.0..=1.0
+                                    ).text("frequência")
+                                ).changed()
+                            {
+                                self.update_effect(ctx)
+                            }
+
+                            if ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut self.settings.ringing.settings.power,
+                                        
+                                        1.0..=10.0
+                                    ).text("poder")
+                                ).changed()
+                            {
+                                self.update_effect(ctx)
+                            }
+
+                            if ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut self.settings.ringing.settings.intensity,
+                                        
+                                        0.0..=10.0
+                                    ).text("escala")
                                 ).changed()
                             {
                                 self.update_effect(ctx)
