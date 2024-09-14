@@ -8,14 +8,16 @@ fn criterion_benchmark(c: &mut Criterion) {
     let img = ImageReader::open("/home/va_erie/Pictures/ntsc-test-1.png").unwrap().decode().unwrap();
     let img = img.as_rgb8().unwrap();
 
-    c.bench_function("full effect", |b| b.iter(|| {
+    c.bench_function("efeito completo", |b| b.iter(|| {
         NtscEffect::default().apply_effect(img, 0, 0);
     }));
 }
 
 criterion_group! {
     name = benches;
+
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
+    
     targets = criterion_benchmark
 }
 
