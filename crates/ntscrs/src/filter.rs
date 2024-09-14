@@ -101,6 +101,8 @@ impl TransferFunction {
             zi[i] = (a_sum * zi[0] - c_sum) * value;
         }
 
+        zi[0] *= value;
+
         zi
     }
 
