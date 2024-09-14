@@ -504,7 +504,7 @@ fn head_switching_noise(
 
     for row_idx in 0..height {
         // isso itera de cima para baixo. aumenta a intensidade à medida que nos aproximamos da parte inferior da imagem.
-        let intensity_scale = row_idx as f64 / height as f64;
+        let intensity_scale = 1.0 - (row_idx as f64 / height as f64);
         let dst_row_idx = yiq.resolution.1 - 1 - row_idx;
         let row = &mut yiq.y[width * dst_row_idx..width * (dst_row_idx + 1)];
 
@@ -683,7 +683,7 @@ impl NtscEffect {
             snow(&mut yiq, seed, self.snow_intensity, frame_num);
         }
 
-        head_switching_noise(&mut yiq, seed, 24, 2.0, 0.005, frame_num);
+        head_switching_noise(&mut yiq, seed, 24, 5.0, 0.005, frame_num);
         head_switching(&mut yiq, 8, 3, 72.0, seed, frame_num);
 
         self.luma_into_chroma(&mut yiq, 50.0, 1);
