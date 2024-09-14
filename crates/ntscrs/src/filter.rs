@@ -141,8 +141,14 @@ impl TransferFunction {
             self.steady_state_condition(initial)
         };
 
-        for i in 0..items.len() {
-            let sample = items[i];
+        for i in 0..(items.len() + delay) {
+            // o limite do loop que se estende além de items.len() ou a chamada min() parece impedir que o otimizador
+            // determinando que estamos dentro dos limites aqui. como i.min(items.len() - 1) nunca excede items.len() - 1 por
+            // definição, é então, algo seguro.
+            let sample = unsafe {
+                items.get_unchecked(i.min(items.len() - 1))
+            };
+
             let filt_sample = z[0] + (num_padded[0] * sample);
 
             for i in 0..filter_len - 2 {
