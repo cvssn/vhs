@@ -155,7 +155,9 @@ impl TransferFunction {
                 z[i] = z[i + 1] + (num_padded[i + 1] * sample) - (self.den[i + 1] * filt_sample);
             }
             
-            z[filter_len - 2] = (num_padded[filter_len - 1] * sample) - (self.den[filter_len - 1] * filt_sample);
+            if filter_len > 1 {
+                z[filter_len - 2] = (num_padded[filter_len - 1] * sample) - (self.den[filter_len - 1] * filt_sample);
+            }
             
             if i >= delay {
                 items[i - delay] = (filt_sample - sample) * scale + sample;
