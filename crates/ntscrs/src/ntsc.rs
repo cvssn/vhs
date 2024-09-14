@@ -120,6 +120,7 @@ impl YiqPlanar {
 
         let height = match field {
             YiqField::Upper | YiqField::Lower => (image.height() + 1) / 2,
+            
             YiqField::Both => image.height()
         } as usize;
 
@@ -157,7 +158,6 @@ impl YiqPlanar {
                     q[pixel_idx] = yiq_pixel[2];
                 }
             });
-        }
 
         YiqPlanar {
             y,
