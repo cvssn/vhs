@@ -1,10 +1,8 @@
 use std::collections::VecDeque;
 
-use image::{buffer::Rows, imageops::{resize, FilterType}, Rgb, RgbImage};
-use nalgebra::{matrix, Matrix3, Scalar, Vector3};
-use num_traits::{Float, NumCast};
+use image::{Rgb, RgbImage};
+use nalgebra::{matrix, Matrix3, Vector3};
 use rand::{rngs::SmallRng, Rng, RngCore, SeedableRng};
-use rand_xoshiro::SplitMix64;
 use simdnoise::NoiseBuilder;
 
 use crate::{

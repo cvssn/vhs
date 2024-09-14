@@ -32,7 +32,9 @@ pub fn sample_noise(t: f64, jitter: f64, seed: u64) -> f64 {
         left_jitter = (Seeder::new(left_coord.wrapping_sub(1))
             .mix_u64(seed)
             .mix_u64(JITTER_SEED)
-            .finalize::<f64>() - 0.5) * jitter;
+            .finalize::<f64>()
+            - 0.5)
+            * jitter;
         
         (-1.0, left_coord.wrapping_sub(1))
     } else if cellspace_coord > right_jitter + 1.0 {
@@ -41,7 +43,9 @@ pub fn sample_noise(t: f64, jitter: f64, seed: u64) -> f64 {
         right_jitter = (Seeder::new(left_coord.wrapping_add(2))
             .mix_u64(seed)
             .mix_u64(JITTER_SEED)
-            .finalize::<f64>() - 0.5) * jitter;
+            .finalize::<f64>()
+            - 0.5)
+            * jitter;
 
         (1.0, left_coord.wrapping_add(1))
     } else {

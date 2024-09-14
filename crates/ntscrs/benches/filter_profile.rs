@@ -5,12 +5,18 @@ use ntscrs::ntsc::NtscEffect;
 use pprof::criterion::{Output, PProfProfiler};
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let img = ImageReader::open("/home/va_erie/Pictures/ntsc-test-1.png").unwrap().decode().unwrap();
+    let img = ImageReader::open("/home/va_erie/Pictures/ntsc-test-1.png")
+        .unwrap()
+        .decode()
+        .unwrap();
+
     let img = img.as_rgb8().unwrap();
 
-    c.bench_function("efeito completo", |b| b.iter(|| {
-        NtscEffect::default().apply_effect(img, 0, 0);
-    }));
+    c.bench_function("efeito completo", |b| {
+        b.iter(|| {
+            NtscEffect::default().apply_effect(img, 0, 0);
+        })
+    });
 }
 
 criterion_group! {

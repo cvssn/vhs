@@ -61,13 +61,17 @@ impl TransferFunction {
             })
             .expect("deve haver pelo menos um coeficiente diferente de zero no denominador.");
 
-        let norm_num = self.num.iter().map(|item| {
-            *item / first_nonzero_coeff
-        }).collect::<Vec<f64>>();
+        let norm_num = self
+            .num
+            .iter()
+            .map(|item| *item / first_nonzero_coeff)
+            .collect::<Vec<f64>>();
 
-        let norm_den = self.den.iter().map(|item| {
-            *item / first_nonzero_coeff
-        }).collect::<Vec<f64>>();
+        let norm_den = self
+            .den
+            .iter()
+            .map(|item| *item / first_nonzero_coeff)
+            .collect::<Vec<f64>>();
 
         let filter_len = usize::max(self.num.len(), self.den.len());
 
@@ -111,7 +115,13 @@ impl TransferFunction {
         yout
     }
 
-    pub fn filter_signal_in_place(&self, items: &mut [f64], initial: f64, scale: f64, delay: usize) {
+    pub fn filter_signal_in_place(
+        &self,
+        items: &mut [f64],
+        initial: f64,
+        scale: f64,
+        delay: usize
+    ) {
         // coloca o zero no numerador da direita
         let num_padded = {
             let mut num = self.num.clone();
