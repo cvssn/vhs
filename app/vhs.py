@@ -3,14 +3,12 @@ import random
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import numpy
-import scipy
-from scipy.signal import lfilter
+from scipy.signal import lfilter, lfiltic
 from scipy.ndimage.interpolation import shift
 
-import numpy as np
 import cv2
 
 
@@ -25,57 +23,57 @@ if getattr(sys, 'frozen', False):
     ring_pattern_real_path = f'{sys._MEIPASS}/app/ringPattern.npy'
 
 ring_pattern_path = Path(ring_pattern_real_path)
-RingPattern = np.load(str(ring_pattern_path.resolve()))
+RingPattern = numpy.load(str(ring_pattern_path.resolve()))
 
 def ringing(img2d, alpha=0.5, noiseSize=0, noiseValue=2, clip=True, seed=None):
-    dft = cv2.dft(np.float32(img2d), flags=cv2.DFT_COMPLEX_OUTPUT)
-    dft_shift = np.fft.fftshift(dft)
+    dft = cv2.dft(numpy.float32(img2d), flags=cv2.DFT_COMPLEX_OUTPUT)
+    dft_shift = numpy.fft.fftshift(dft)
 
     rows, cols = img2d.shape
     crow, ccol = int(rows / 2), int(cols / 2)
     
-    mask = np.zeros((rows, cols, 2), np.uint8)
+    mask = numpy.zeros((rows, cols, 2), numpy.uint8)
     maskH = min(crow, int(1 + alpha * crow))
     mask[:, ccol - maskH:ccol + maskH] = 1
 
     if noiseSize > 0:
-        noise = np.ones((mask.shape[0], mask.shape[1], mask.shape[2])) * noiseValue - noiseValue / 2.
+        noise = numpy.ones((mask.shape[0], mask.shape[1], mask.shape[2])) * noiseValue - noiseValue / 2.
         
         start = int(ccol - ((1 - noiseSize) * ccol))
         stop = int(ccol + ((1 - noiseSize) * ccol))
         
         noise[:, start:stop, :] = 0
-        rnd = np.random.RandomState(seed)
+        rnd = numpy.random.RandomState(seed)
         
-        mask = mask.astype(np.float) + rnd.rand(mask.shape[0], mask.shape[1], mask.shape[2]) * noise - noise / 2.
+        mask = mask.astype(numpy.float) + rnd.rand(mask.shape[0], mask.shape[1], mask.shape[2]) * noise - noise / 2.
 
-    img_back = cv2.idft(np.fft.ifftshift(dft_shift * mask), flags=cv2.DFT_SCALE)
+    img_back = cv2.idft(numpy.fft.ifftshift(dft_shift * mask), flags=cv2.DFT_SCALE)
     
     if clip:
         _min, _max = img2d.min(), img2d.max()
         
-        return np.clip(img_back[:, :, 0], _min, _max)
+        return numpy.clip(img_back[:, :, 0], _min, _max)
     else:
         return img_back[:, :, 0]
 
 def ringing2(img2d, power=4, shift=0, clip=True):
-    dft = cv2.dft(np.float32(img2d), flags=cv2.DFT_COMPLEX_OUTPUT)
-    dft_shift = np.fft.fftshift(dft)
+    dft = cv2.dft(numpy.float32(img2d), flags=cv2.DFT_COMPLEX_OUTPUT)
+    dft_shift = numpy.fft.fftshift(dft)
 
     rows, cols = img2d.shape
 
     scalecols = int(cols * (1 + shift))
-    mask = cv2.resize(RingPattern[np.newaxis, :], (scalecols, 1), interpolation=cv2.INTER_LINEAR)[0]
+    mask = cv2.resize(RingPattern[numpy.newaxis, :], (scalecols, 1), interpolation=cv2.INTER_LINEAR)[0]
 
     mask = mask[(scalecols // 2) - (cols // 2):(scalecols // 2) + (cols // 2)]
     mask = mask ** power
     
-    img_back = cv2.idft(np.fft.ifftshift(dft_shift * mask[None, :, None]), flags=cv2.DFT_SCALE)
+    img_back = cv2.idft(numpy.fft.ifftshift(dft_shift * mask[None, :, None]), flags=cv2.DFT_SCALE)
     
     if clip:
         _min, _max = img2d.min(), img2d.max()
         
-        return np.clip(img_back[:, :, 0], _min, _max)
+        return numpy.clip(img_back[:, :, 0], _min, _max)
     else:
         return img_back[:, :, 0]
 

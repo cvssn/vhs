@@ -8,6 +8,7 @@ import cv2
 from PyQt5 import QtCore
 import ffmpeg
 from imutils.video import FileVideoStream
+import numpy
 from numpy import ndarray
 
 from app.logs import logger
@@ -33,7 +34,7 @@ class Config(TypedDict):
 class AbstractRenderer(QtCore.QObject):
     @staticmethod
     @abc.abstractmethod
-    def apply_main_effect(vhs: Vhs, frame1, frame2=None):
+    def apply_main_effect(vhs: Vhs, frame1, frame2, frameno: int):
         raise NotImplementedError()
 
 class DefaultRenderer(AbstractRenderer):
@@ -48,18 +49,28 @@ class DefaultRenderer(AbstractRenderer):
     increment_progress = QtCore.pyqtSignal()
     render_data = {}
     current_frame_index = 0
+    show_frame_index = 0
     cap = None
+    interlaced = False
+    lossless = True
+    framecount: int = 0
+    videoend: int = 0
     buffer: dict[int, ndarray] = defaultdict(lambda: None)
 
     @staticmethod
-    def apply_main_effect(vhs: Vhs, frame1, frame2=None):
+    def apply_main_effect(vhs: Vhs, frame1, frame2, frameno: int):
         if frame2 is None:
             frame2 = frame1
 
-        frame = vhs.composite_layer(frame1, frame2, field=0, fieldno=1)
-        frame = cv2.convertScaleAbs(frame)
+        frame1 = vhs.composite_layer(frame1, frame1, field=0, fieldno=0, frameno=frameno)
+        frame1 = cv2.convertScaleAbs(frame1)
         
-        frame[1:-1:2] = frame[0:-2:2] / 2 + frame[2::2] / 2
+        frame2 = cv2.copyMakeBorder(frame2, 1, 0, 0, 0, cv2.BORDER_CONSTANT)
+        frame2 = vhs.composite_layer(frame2, frame2, field=2, fieldno=2, frameno=frameno)
+        frame2 = cv2.convertScaleAbs(frame2)
+        
+        frame = frame1
+        frame[1::2,:] = frame2[2::2,:]
         
         return frame
 
@@ -68,17 +79,55 @@ class DefaultRenderer(AbstractRenderer):
         current_index = self.current_frame_index
 
         if buf[current_index] is None:
-            current_frame = self.cap.read()
+            if self.interlaced:
+                self.capdetect.set(1, current_index)
+                
+                _, cframe = self.capdetect.read()
+                
+                # print("frame atual - cap detect")
+                
+                current_frame = cframe
+            else:
+                current_frame = self.cap.read()
         else:
             current_frame = buf[current_index]
             
-        next_frame = self.cap.read()
-
+        # print("frame atual")
+            
+        if (self.framecount % 2 == 0):
+            framefortwo = True
+        else:
+            framefortwo = False
+            
+        if self.interlaced:
+            self.capdetect.set(1, current_index + 1)
+            _, cframe = self.capdetect.read()
+            
+            #print("próximo frame - cap detect")
+            
+            next_frame = cframe
+            
+            self.capdetect.set(1, current_index)
+        else:
+            next_frame = self.cap.read()
+            
+        # print("próximo frame")
+        #
+        # if next_frame is None and self.interlaced and framefortwo != True and self.videoend == 0:
+        #     next_frame = current_frame
+        #
+        #     self.videoend = 1
+        
         if current_index > 0:
             del buf[current_index-1]
             
         buf[current_index] = current_frame
+        # print("buf atual:")
+        # print(buf[current_index])
+        
         buf[current_index+1] = next_frame
+        # print("próximo buf:")
+        # print(buf[current_index+1])
 
     def prepare_frame(self, frame):
         orig_wh = self.config.get("orig_wh")
@@ -125,10 +174,12 @@ class DefaultRenderer(AbstractRenderer):
 
         if self.mainEffect:
             frame = self.apply_main_effect(
-                vhs=self.render_data.get("vhs"),
+                self.render_data.get("vhs"),
                 
-                frame1=frame1,
-                frame2=frame2
+                frame1,
+                frame2,
+                
+                self.show_frame_index
             )
         else:
             frame = frame1
@@ -169,7 +220,8 @@ class DefaultRenderer(AbstractRenderer):
             render_wh=render_wh,
             orig_wh=orig_wh,
 
-            lossless=False,
+            lossless=self.render_data["lossless"],
+            framecount=self.render_data["framecount"],
             next_frame_context=True,
 
             audio_process=False,
@@ -178,12 +230,35 @@ class DefaultRenderer(AbstractRenderer):
             audio_noise_volume=0.03
         )
 
+    def update_check(self, cap, frameindex):
+        cap.set(1, frameindex)
+        checkframe1, _ = cap.read()
+        
+        # cap.set(1, frameindex+1)
+        # checkframe2, _ = cap.read()
+        # cap.set(1, frameindex)
+
+        return checkframe1
+    
+    def check_frame_stops(self, frameindex, framecount):
+        if((frameindex > framecount) or (frameindex+1 > framecount)):
+            return framecount
+        
+        return frameindex
+    
+    def update_chromaencoding(self, vhs: Vhs, frameindex):
+        if (frameindex % 2 != 0):
+            vhs._video_scanline_phase_shift_offset = 2
+        else:
+            vhs._video_scanline_phase_shift_offset = 0
 
     def run(self):
         self.set_up()
         self.running = True
 
         suffix = '.mkv'
+        
+        # print(self.config.get("lossless"))
 
         tmp_output = self.render_data['target_file'].parent / f'tmp_{self.render_data["target_file"].stem}{suffix}'
 
@@ -192,10 +267,23 @@ class DefaultRenderer(AbstractRenderer):
             cv2.VideoWriter_fourcc(*'H264')
         ]
 
-        if self.config.get("lossless"):
-            fourcc_choice = cv2.VideoWriter_fourcc(*'FFV1')
+        # if self.config.get("lossless"):
+        #     fourcc_choice = cv2.VideoWriter_fourcc(*'FFV1')
+        # else:
+        #     fourcc_choice = fourccs.pop(0)
+        
+        # processar arquivo temporário sem perda para melhor compressão durante encoding
+        
+        fourcc_choice = cv2.VideoWriter_fourcc(*'FFV1')
+        
+        if (self.interlaced):
+            framerate = self.render_data["input_video"]["orig_fps"] / 2
         else:
-            fourcc_choice = fourccs.pop(0)
+            framerate = self.render_data["input_video"]["orig_fps"]
+        
+        self.framecount = self.config.get("framecount")
+        
+        # print(self.framecount)
 
         video = cv2.VideoWriter()
 
@@ -205,7 +293,7 @@ class DefaultRenderer(AbstractRenderer):
             open_result = video.open(
                 filename=str(tmp_output.resolve()),
                 fourcc=fourcc_choice,
-                fps=self.render_data["input_video"]["orig_fps"],
+                fps=framerate,
                 frameSize=self.config.get("container_wh")
             )
             
@@ -214,38 +302,69 @@ class DefaultRenderer(AbstractRenderer):
         logger.debug(f'vídeo de entrada: {str(self.render_data["input_video"]["path"].resolve())}')
         logger.debug(f'saída temporária: {str(tmp_output.resolve())}')
         logger.debug(f'vídeo de saída: {str(self.render_data["target_file"].resolve())}')
-        # logger.debug(f'Process audio: {self.process_audio}')
+        # logger.debug(f'processo de áudio: {self.process_audio}')
+        logger.debug(f'áudio de processo: {str(self.config.get("audio_process"))}')
 
-        self.current_frame_index = -1
+        self.current_frame_index = 0
+        self.show_frame_index = 0
+        
         self.renderStateChanged.emit(True)
+        
         self.cap = FileVideoStream(path=str(self.render_data["input_video"]["path"]), queue_size=322).start()
+        self.capdetect = self.render_data["input_video"]["cap"]
+        
+        checkframe = self.update_check(self.capdetect,self.current_frame_index)
 
-        while self.cap.more():
+        while self.running:
             if self.pause:
                 self.sendStatus.emit(f"{status_string} [p]")
                 
                 time.sleep(0.3)
                 
                 continue
-
-            self.current_frame_index += 1
-            self.update_buffer()
             
-            frame = self.produce_frame()
-
-            status_string = '[cv2] progresso da renderização: {current_frame_index}/{total}'.format(
-                current_frame_index=self.current_frame_index,
-                total=self.render_data["input_video"]["frames_count"]
-            )
-            
-            if frame is False:
-                logger.info(f"erro de finalização ou renderização do vídeo {status_string}")
+            if checkframe is False:
+                logger.info(f"fim de vídeo ou erro de renderização: {status_string}")
                 
                 break
+            
+            self.update_chromaencoding(self.render_data.get("vhs"),self.show_frame_index)
+
+            self.update_buffer()
+            frame = self.produce_frame()
+            
+            # print(frame)            
+
+            status_string = '[cv2] progresso da renderização: {current_frame_index}/{total}'.format(
+                current_frame_index=self.show_frame_index,
+                total=(self.framecount)
+            )
+            
+            # print("string de status")
+            #
+            # if frame is False:
+            #     logger.info(f"fim de vídeo ou erro de renderização: {status_string}")
+            #
+            #     break
+            
+            if self.interlaced:
+                self.current_frame_index += 2
+            else:
+                self.current_frame_index += 1
+                
+            self.show_frame_index += 1
+            
+            # print("alterar frames")
 
             self.sendStatus.emit(status_string)
             
+            # print("escrevendo vídeo")
+            
             video.write(frame)
+
+            # self.current_frame_index = self.check_frame_stops(self.current_frame_index,self.framecount)
+
+            checkframe = self.update_check(self.capdetect,self.current_frame_index)
 
         video.release()
 
@@ -262,7 +381,7 @@ class DefaultRenderer(AbstractRenderer):
 
         final_audio = orig.audio
 
-        if(self.audio_process == True):
+        if(self.config.get('audio_process')):
             self.sendStatus.emit(f'[ffmpeg] preparando filtragem de áudio')
 
             # tmp_audio = self.render_data['target_file'].parent / f'tmp_audio_{self.render_data["target_file"].stem}.wav'
@@ -306,11 +425,20 @@ class DefaultRenderer(AbstractRenderer):
         temp_video_stream = ffmpeg.input(str(tmp_output.resolve()))
         # render_streams.append(temp_video_stream.video)
 
-        if self.audio_process:
+        if self.config.get("audio_process"):
             acodec = 'flac' if target_suffix == '.mkv' else 'copy'
-            ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='copy', acodec=acodec)
+            
+            if (self.config.get("lossless")):
+                ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='copy', acodec=acodec)
+            else:
+                ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='libx264', preset='slow', crf=16, **{'vf': 'setfield=tff'}, **{'flags': '+ildct+ilme'}, acodec=acodec)
         else:
-            ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='copy', acodec='copy')
+            acodec = 'copy' if target_suffix == '.mkv' else 'aac'
+            
+            if (self.config.get("lossless")):
+                ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='copy', acodec=acodec, **{'b:a': '320k'})
+            else:
+                ff_command = ffmpeg.output(temp_video_stream.video, final_audio, result_path, shortest=None, vcodec='libx264', preset='slow', crf=16, **{'vf': 'setfield=tff'}, **{'flags': '+ildct+ilme'}, acodec=acodec, **{'b:a': '320k'})
 
         logger.debug(ff_command)
         logger.debug(' '.join(ff_command.compile()))
@@ -329,7 +457,7 @@ class DefaultRenderer(AbstractRenderer):
 
         tmp_output.unlink()
         
-        if self.audio_process:
+        if self.config.get("audio_process"):
             if os.path.exists(tmp_audio):
                 os.remove(tmp_audio)
 
